@@ -1,0 +1,170 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_audiophile_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_card_bg"
+    android:orientation="vertical"
+    android:padding="12dp">
+
+    <!-- Top section: Artwork, Info, Audio Format Tags -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <ImageView
+            android:id="@+id/widget_audiophile_artwork"
+            android:layout_width="60dp"
+            android:layout_height="60dp"
+            android:contentDescription="Album Artwork"
+            android:scaleType="centerCrop"
+            android:src="@drawable/ic_widget_music" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/widget_audiophile_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Hashtag Music Player"
+                android:textColor="@color/widget_text_primary"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/widget_audiophile_artist"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:ellipsize="end"
+                android:maxLines="1"
+                android:text="Offline Hi-Res Audio Engine"
+                android:textColor="@color/widget_text_secondary"
+                android:textSize="12sp" />
+
+            <!-- Technical format badges -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="5dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/widget_format_tag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/widget_badge_bg"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:text="FLAC • 980 kbps"
+                    android:textColor="@color/widget_primary"
+                    android:textSize="10sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/widget_dsp_tag"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:background="@drawable/widget_badge_bg"
+                    android:paddingStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="6dp"
+                    android:paddingBottom="2dp"
+                    android:text="32-bit DSP"
+                    android:textColor="@color/widget_text_secondary"
+                    android:textSize="10sp" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Middle section: Seek progress bar with elapsed and remaining time -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:gravity="center_vertical"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/widget_time_elapsed"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textColor="@color/widget_text_secondary"
+            android:textSize="10sp" />
+
+        <ProgressBar
+            android:id="@+id/widget_progress_bar"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="0dp"
+            android:layout_height="4dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            android:layout_weight="1"
+            android:max="1000"
+            android:progress="0"
+            android:progressTint="@color/widget_primary" />
+
+        <TextView
+            android:id="@+id/widget_time_duration"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="00:00"
+            android:textColor="@color/widget_text_secondary"
+            android:textSize="10sp" />
+    </LinearLayout>
+
+    <!-- Bottom section: Playback Controls -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <ImageButton
+            android:id="@+id/widget_audiophile_prev"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/widget_button_bg"
+            android:contentDescription="Previous Track"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_widget_prev" />
+
+        <ImageButton
+            android:id="@+id/widget_audiophile_play_pause"
+            android:layout_width="48dp"
+            android:layout_height="48dp"
+            android:layout_marginStart="24dp"
+            android:layout_marginEnd="24dp"
+            android:background="@drawable/widget_button_bg"
+            android:contentDescription="Play/Pause"
+            android:padding="10dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_widget_play" />
+
+        <ImageButton
+            android:id="@+id/widget_audiophile_next"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/widget_button_bg"
+            android:contentDescription="Next Track"
+            android:padding="8dp"
+            android:scaleType="fitCenter"
+            android:src="@drawable/ic_widget_next" />
+    </LinearLayout>
+</LinearLayout>

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:initialLayout="@layout/widget_audiophile_player"
+    android:minWidth="280dp"
+    android:minHeight="120dp"
+    android:minResizeWidth="220dp"
+    android:minResizeHeight="100dp"
+    android:previewImage="@drawable/music_player_icon_1789631460691"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="0"
+    android:widgetCategory="home_screen" />

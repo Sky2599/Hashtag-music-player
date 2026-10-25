@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+
+    <!-- Back Layer: Vibrant Neon Magenta (#E000FA) Offset Shadow Layer -->
+    <group
+        android:name="back_hashtag_layer">
+        <!-- Back Left Slanted Bar -->
+        <path
+            android:fillColor="#E000FA"
+            android:pathData="M 47,28 L 54,28 L 46,86 L 39,86 Z" />
+        <!-- Back Right Slanted Bar -->
+        <path
+            android:fillColor="#E000FA"
+            android:pathData="M 69,28 L 76,28 L 68,86 L 61,86 Z" />
+        <!-- Back Top Horizontal Bar -->
+        <path
+            android:fillColor="#E000FA"
+            android:pathData="M 28,45 L 86,45 L 86,52 L 28,52 Z" />
+        <!-- Back Bottom Horizontal Bar -->
+        <path
+            android:fillColor="#E000FA"
+            android:pathData="M 28,65 L 86,65 L 86,72 L 28,72 Z" />
+    </group>
+
+    <!-- Front Layer: Muted Slate Violet (#6E5288) Front Hashtag -->
+    <group
+        android:name="front_hashtag_layer">
+        <!-- Front Left Slanted Bar -->
+        <path
+            android:fillColor="#6E5288"
+            android:pathData="M 44,25 L 51,25 L 43,83 L 36,83 Z" />
+        <!-- Front Right Slanted Bar -->
+        <path
+            android:fillColor="#6E5288"
+            android:pathData="M 66,25 L 73,25 L 65,83 L 58,83 Z" />
+        <!-- Front Top Horizontal Bar -->
+        <path
+            android:fillColor="#6E5288"
+            android:pathData="M 25,42 L 83,42 L 83,49 L 25,49 Z" />
+        <!-- Front Bottom Horizontal Bar -->
+        <path
+            android:fillColor="#6E5288"
+            android:pathData="M 25,62 L 83,62 L 83,69 L 25,69 Z" />
+    </group>
+
+</vector>

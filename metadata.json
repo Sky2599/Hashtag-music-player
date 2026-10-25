@@ -1,0 +1,6 @@
+{
+  "name": "Hashtag music player",
+  "description": "Offline local music player with Material You Monet theming, reactive FFT spectrum visualizer, native home screen widgets, 10-band equalizer, and background playback.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
