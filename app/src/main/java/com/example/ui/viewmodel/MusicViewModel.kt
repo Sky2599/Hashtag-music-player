@@ -122,9 +122,6 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
     private val _showEqualizerDialog = MutableStateFlow(false)
     val showEqualizerDialog: StateFlow<Boolean> = _showEqualizerDialog.asStateFlow()
 
-    private val _showMixStudioDialog = MutableStateFlow(false)
-    val showMixStudioDialog: StateFlow<Boolean> = _showMixStudioDialog.asStateFlow()
-
     private val _isGaplessActive = MutableStateFlow(false)
     val isGaplessActive: StateFlow<Boolean> = _isGaplessActive.asStateFlow()
 
@@ -134,9 +131,6 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
 
     private val _showSleepTimerDialog = MutableStateFlow(false)
     val showSleepTimerDialog: StateFlow<Boolean> = _showSleepTimerDialog.asStateFlow()
-
-    private val _showMultiQueueDialog = MutableStateFlow(false)
-    val showMultiQueueDialog: StateFlow<Boolean> = _showMultiQueueDialog.asStateFlow()
 
     private val _showTagEditorDialog = MutableStateFlow(false)
     val showTagEditorDialog: StateFlow<Boolean> = _showTagEditorDialog.asStateFlow()
@@ -986,10 +980,6 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
         _showEqualizerDialog.value = visible
     }
 
-    fun setMixStudioDialogVisible(visible: Boolean) {
-        _showMixStudioDialog.value = visible
-    }
-
     // Dialog Controls
     fun setPrecisionPlaybackDialogVisible(visible: Boolean) {
         _showPrecisionPlaybackDialog.value = visible
@@ -997,10 +987,6 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setSleepTimerDialogVisible(visible: Boolean) {
         _showSleepTimerDialog.value = visible
-    }
-
-    fun setMultiQueueDialogVisible(visible: Boolean) {
-        _showMultiQueueDialog.value = visible
     }
 
     fun setTagEditorDialogVisible(visible: Boolean) {

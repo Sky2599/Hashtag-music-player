@@ -1,6 +1,17 @@
 package com.example.ui.components
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import com.example.ui.theme.LocalAppTheme
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -46,6 +57,7 @@ import androidx.compose.material3.NavigationDrawerItem
 import androidx.compose.material3.NavigationDrawerItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,14 +91,7 @@ enum class SidebarItem(
 ) {
     LIBRARY("Library", Icons.Default.LibraryMusic, "sidebar_library"),
     FOLDERS("Folders", Icons.Default.Folder, "sidebar_folders"),
-    PLAYING_QUEUE("Multi-Queues & Setter", Icons.AutoMirrored.Filled.QueueMusic, "sidebar_queue", "4-Slot Independent Queue Manager"),
     EQUALISER("Equaliser & DSP", Icons.Default.GraphicEq, "sidebar_equaliser"),
-    MIX_STUDIO(
-        title = "Mix Studio / DJ Transitions",
-        icon = Icons.Default.Tune,
-        tag = "sidebar_mix_studio",
-        subtitle = "Harmonic Automix & Transition Editor"
-    ),
     LISTENING_STATS("Listening Stats", Icons.Default.BarChart, "sidebar_stats", "Sonic DNA, Rotation & Fidelity Page"),
     SCAN_MEDIA("Scan Media", Icons.Default.Refresh, "sidebar_scan_media"),
     SETTINGS("Settings", Icons.Default.Settings, "sidebar_settings"),
@@ -103,27 +108,97 @@ fun AppSidebar(
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+
+    val infiniteTransition = rememberInfiniteTransition(label = "sidebar_sheen")
+    val sheenProgress by infiniteTransition.animateFloat(
+        initialValue = -1.2f,
+        targetValue = 2.4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "sheen_sweep"
+    )
+
     ModalDrawerSheet(
         modifier = modifier
-            .width(300.dp)
+            .width(308.dp)
             .fillMaxHeight(),
-        drawerContainerColor = DeepPurpleSurface
+        drawerContainerColor = if (isLiquidGlass) Color(0xF6070C18) else DeepPurpleSurface
     ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding()
         ) {
-            // Header: Shows now playing song name
+            // Header: Glass Pill Now Playing Container
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
+                    .clip(RoundedCornerShape(24.dp))
                     .background(
-                        Brush.verticalGradient(
-                            listOf(ElectricViolet.copy(alpha = 0.35f), Color.Transparent)
-                        )
+                        if (isLiquidGlass) {
+                            Brush.linearGradient(
+                                listOf(
+                                    Color(0x3500F0FF),
+                                    Color(0x16FFFFFF),
+                                    Color(0x280D1D34)
+                                )
+                            )
+                        } else {
+                            Brush.linearGradient(
+                                listOf(
+                                    ElectricViolet.copy(alpha = 0.25f),
+                                    DeepPurpleDark.copy(alpha = 0.75f)
+                                )
+                            )
+                        }
                     )
-                    .padding(20.dp)
+                    .border(
+                        width = 1.2.dp,
+                        brush = if (isLiquidGlass) {
+                            Brush.linearGradient(
+                                listOf(
+                                    Color(0xCCFFFFFF),
+                                    Color(0x6000F0FF),
+                                    Color(0x20FFFFFF),
+                                    Color(0x99FFFFFF)
+                                )
+                            )
+                        } else {
+                            Brush.linearGradient(
+                                listOf(
+                                    ElectricVioletLight.copy(alpha = 0.6f),
+                                    DeepPurpleSurface
+                                )
+                            )
+                        },
+                        shape = RoundedCornerShape(24.dp)
+                    )
+                    .drawWithContent {
+                        drawContent()
+                        if (isLiquidGlass) {
+                            val sweepX = size.width * sheenProgress
+                            drawRect(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color(0x18FFFFFF),
+                                        Color(0x85FFFFFF),
+                                        Color(0x22FFFFFF),
+                                        Color.Transparent
+                                    ),
+                                    start = Offset(sweepX, 0f),
+                                    end = Offset(sweepX + size.width * 0.40f, size.height)
+                                ),
+                                blendMode = BlendMode.Screen
+                            )
+                        }
+                    }
+                    .padding(horizontal = 14.dp, vertical = 12.dp)
             ) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
@@ -135,41 +210,81 @@ fun AppSidebar(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         if (currentSong != null) {
-                            AlbumArtContainer(
-                                albumArtUri = currentSong.albumArtUri,
-                                size = 44.dp,
-                                cornerRadius = 10.dp,
-                                contentDescription = "Now Playing Artwork"
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isLiquidGlass) Color(0x7000F0FF) else ElectricViolet.copy(alpha = 0.5f),
+                                        shape = RoundedCornerShape(14.dp)
+                                    )
+                            ) {
+                                AlbumArtContainer(
+                                    albumArtUri = currentSong.albumArtUri,
+                                    size = 46.dp,
+                                    cornerRadius = 14.dp,
+                                    contentDescription = "Now Playing Artwork"
+                                )
+                            }
                         } else {
                             Box(
                                 modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(ElectricViolet),
+                                    .size(46.dp)
+                                    .clip(RoundedCornerShape(14.dp))
+                                    .background(
+                                        if (isLiquidGlass) Color(0x3500F0FF) else ElectricViolet
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        color = if (isLiquidGlass) Color(0x80FFFFFF) else ElectricVioletLight,
+                                        shape = RoundedCornerShape(14.dp)
+                                    ),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
                                     imageVector = Icons.Default.Headphones,
                                     contentDescription = null,
-                                    tint = TextPrimary,
+                                    tint = if (isLiquidGlass) Color.White else TextPrimary,
                                     modifier = Modifier.size(24.dp)
                                 )
                             }
                         }
+
                         Spacer(modifier = Modifier.width(12.dp))
+
                         Column(modifier = Modifier.weight(1f)) {
+                            // Frosted NOW PLAYING label
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(6.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isLiquidGlass) Color(0xFF00F0FF) else ElectricVioletLight)
+                                )
+                                Text(
+                                    text = "NOW PLAYING",
+                                    color = if (isLiquidGlass) Color(0xFFBAF7FF) else ElectricVioletLight,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    letterSpacing = 0.8.sp
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 text = currentSong?.title ?: "No Song Playing",
                                 color = TextPrimary,
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = if (currentSong != null) currentSong.artist else "Select a song to play",
-                                color = ElectricVioletLight,
+                                color = if (isLiquidGlass) Color(0xFFB0C5DB) else ElectricVioletLight,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium,
                                 maxLines = 1,
@@ -182,18 +297,33 @@ fun AppSidebar(
 
                     IconButton(
                         onClick = onCloseDrawer,
-                        modifier = Modifier.testTag("close_drawer_button")
+                        modifier = Modifier
+                            .size(34.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isLiquidGlass) Color(0x25FFFFFF) else DeepPurpleDark
+                            )
+                            .border(
+                                width = 1.dp,
+                                color = if (isLiquidGlass) Color(0x50FFFFFF) else Color.Transparent,
+                                shape = CircleShape
+                            )
+                            .testTag("close_drawer_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close drawer",
-                            tint = TextSecondary
+                            tint = if (isLiquidGlass) Color.White else TextSecondary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
             }
 
-            HorizontalDivider(color = DeepPurpleDark, thickness = 1.dp)
+            HorizontalDivider(
+                color = if (isLiquidGlass) Color(0x2000F0FF) else DeepPurpleDark,
+                thickness = 1.dp
+            )
 
             // Menu Items List
             LazyColumn(

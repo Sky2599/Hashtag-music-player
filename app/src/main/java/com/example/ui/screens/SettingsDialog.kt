@@ -61,8 +61,26 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.offset
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.ui.theme.LocalAppTheme
+import kotlin.math.sin
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -120,7 +138,6 @@ fun SettingsScreen(
     onManualRescan: () -> Unit,
     onOpenEqualizer: () -> Unit = {},
     onOpenFolders: () -> Unit = {},
-    onOpenMixStudio: () -> Unit = {},
     onResetPlaybackSpeedAndPitch: () -> Unit = {},
     onBackClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -139,10 +156,34 @@ fun SettingsScreen(
     val pagerState = rememberPagerState(initialPage = 0, pageCount = { tabs.size })
     val coroutineScope = rememberCoroutineScope()
 
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+
+    val infiniteTransition = rememberInfiniteTransition(label = "settings_glass_anims")
+    val sheenProgress by infiniteTransition.animateFloat(
+        initialValue = -0.6f,
+        targetValue = 1.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "tab_sheen_sweep"
+    )
+
+    val ambientPillPhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 6800, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "ambient_pill_phase"
+    )
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(DeepPurple)
+            .background(if (isLiquidGlass) Color.Transparent else DeepPurple)
             .statusBarsPadding()
             .navigationBarsPadding()
             .testTag("settings_screen")
@@ -170,20 +211,20 @@ fun SettingsScreen(
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Back",
-                            tint = TextPrimary
+                            tint = if (isLiquidGlass) Color.White else TextPrimary
                         )
                     }
                     Spacer(modifier = Modifier.width(6.dp))
                     Column {
                         Text(
                             text = "Settings",
-                            color = TextPrimary,
+                            color = if (isLiquidGlass) Color.White else TextPrimary,
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
                             text = tabs[pagerState.currentPage].subtitle,
-                            color = ElectricVioletLight,
+                            color = if (isLiquidGlass) Color(0xFF00F0FF) else ElectricVioletLight,
                             fontSize = 12.sp,
                             fontWeight = FontWeight.Medium
                         )
@@ -191,45 +232,202 @@ fun SettingsScreen(
                 }
             }
 
-            // 2. Tab Bar with Instant Pager Sync
-            PrimaryScrollableTabRow(
-                selectedTabIndex = pagerState.currentPage,
-                containerColor = DeepPurpleDark,
-                contentColor = TextPrimary,
-                edgePadding = 12.dp,
-                divider = { HorizontalDivider(color = DeepPurpleSurface) }
+            // 2. Liquid Glass Tab Bar with moving reflective pill and ambient floating pill
+            BoxWithConstraints(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 12.dp, vertical = 4.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(
+                        if (isLiquidGlass) {
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color(0x350C1A2E),
+                                    Color(0x22060D1A)
+                                )
+                            )
+                        } else {
+                            Brush.verticalGradient(
+                                listOf(
+                                    DeepPurpleDark,
+                                    DeepPurpleDark
+                                )
+                            )
+                        }
+                    )
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.horizontalGradient(
+                            listOf(
+                                Color(0x30FFFFFF),
+                                if (isLiquidGlass) Color(0x7000F0FF) else theme.primary.copy(alpha = 0.5f),
+                                Color(0x30FFFFFF)
+                            )
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    .height(52.dp)
             ) {
-                tabs.forEachIndexed { index, tab ->
-                    val isSelected = pagerState.currentPage == index
-                    Tab(
-                        selected = isSelected,
-                        onClick = {
-                            TactileHaptics.selectionClick(view)
-                            coroutineScope.launch {
-                                pagerState.scrollToPage(index)
+                val totalWidth = maxWidth
+                val tabCount = tabs.size
+                val tabWidth = totalWidth / tabCount
+                val pillWidth = tabWidth - 6.dp
+                val pillHeight = 42.dp
+
+                // Active Tab Target X position with smooth spring physics
+                val targetPillX = tabWidth * pagerState.currentPage + 3.dp
+                val animatedPillX by animateDpAsState(
+                    targetValue = targetPillX,
+                    animationSpec = spring(
+                        dampingRatio = 0.8f,
+                        stiffness = 380f
+                    ),
+                    label = "settings_tab_pill_x"
+                )
+
+                // 1. Ambient Floating Liquid Glass Pill
+                // "in settings add that pill that moves around the tabs as well"
+                val ambientPillWidth = 36.dp
+                val ambientPillHeight = 16.dp
+                val amplitudeX = (totalWidth.value - 50f) * 0.42f
+                val centerX = (totalWidth.value - ambientPillWidth.value) / 2f
+                val offsetX = centerX + amplitudeX * sin(ambientPillPhase)
+                val offsetY = 18f + 10f * sin(ambientPillPhase * 2f)
+                val rotationDeg = sin(ambientPillPhase) * 12f
+
+                Box(
+                    modifier = Modifier
+                        .size(width = ambientPillWidth, height = ambientPillHeight)
+                        .graphicsLayer {
+                            translationX = offsetX * density
+                            translationY = offsetY * density
+                            rotationZ = rotationDeg
+                            alpha = if (isLiquidGlass) 0.65f else 0.35f
+                        }
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(
+                            Brush.linearGradient(
+                                listOf(
+                                    Color(0x4000F0FF),
+                                    Color(0x25FFFFFF),
+                                    Color(0x3038BDF8)
+                                )
+                            )
+                        )
+                        .border(
+                            1.dp,
+                            Brush.horizontalGradient(
+                                listOf(
+                                    Color(0x60FFFFFF),
+                                    Color(0x5000F0FF),
+                                    Color(0x70FFFFFF)
+                                )
+                            ),
+                            RoundedCornerShape(8.dp)
+                        )
+                )
+
+                // 2. Reflective Active Tab Pill
+                Box(
+                    modifier = Modifier
+                        .offset(x = animatedPillX, y = (52.dp - pillHeight) / 2)
+                        .size(width = pillWidth, height = pillHeight)
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(
+                            if (isLiquidGlass) {
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color(0x4000F0FF),
+                                        Color(0x18FFFFFF),
+                                        Color(0x280B2233)
+                                    )
+                                )
+                            } else {
+                                Brush.verticalGradient(
+                                    listOf(
+                                        theme.primary.copy(alpha = 0.32f),
+                                        theme.surfaceVariant.copy(alpha = 0.45f)
+                                    )
+                                )
                             }
-                        },
-                        modifier = Modifier.testTag("settings_tab_$index"),
-                        text = {
+                        )
+                        .border(
+                            width = 1.2.dp,
+                            brush = Brush.linearGradient(
+                                listOf(
+                                    Color(0x90FFFFFF),
+                                    if (isLiquidGlass) Color(0x6000F0FF) else theme.primaryLight.copy(alpha = 0.6f),
+                                    Color(0x40FFFFFF)
+                                )
+                            ),
+                            shape = RoundedCornerShape(16.dp)
+                        )
+                        .drawWithContent {
+                            drawContent()
+                            val sheenW = size.width * 0.7f
+                            val sheenX = (sheenProgress * (size.width + sheenW)) - sheenW
+                            drawRect(
+                                brush = Brush.linearGradient(
+                                    colors = listOf(
+                                        Color.Transparent,
+                                        Color(0x30FFFFFF),
+                                        Color(0x50FFFFFF),
+                                        Color.Transparent
+                                    ),
+                                    start = Offset(sheenX, 0f),
+                                    end = Offset(sheenX + sheenW, size.height)
+                                ),
+                                blendMode = BlendMode.Screen
+                            )
+                        }
+                )
+
+                // 3. Tab Labels and Icons
+                Row(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    tabs.forEachIndexed { index, tab ->
+                        val isSelected = pagerState.currentPage == index
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clickable {
+                                    TactileHaptics.selectionClick(view)
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(index)
+                                    }
+                                }
+                                .testTag("settings_tab_$index"),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                                modifier = Modifier.padding(horizontal = 4.dp)
                             ) {
                                 Icon(
                                     imageVector = tab.icon,
                                     contentDescription = null,
-                                    tint = if (isSelected) ElectricVioletLight else TextSecondary,
-                                    modifier = Modifier.size(18.dp)
+                                    tint = if (isSelected) {
+                                        if (isLiquidGlass) Color(0xFF00F0FF) else ElectricVioletLight
+                                    } else TextSecondary,
+                                    modifier = Modifier.size(16.dp)
                                 )
                                 Text(
                                     text = tab.title,
-                                    color = if (isSelected) ElectricVioletLight else TextSecondary,
-                                    fontSize = 13.sp,
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                    color = if (isSelected) {
+                                        if (isLiquidGlass) Color.White else ElectricVioletLight
+                                    } else TextSecondary,
+                                    fontSize = 12.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
-                    )
+                    }
                 }
             }
 
@@ -258,9 +456,14 @@ fun SettingsScreen(
                                 item {
                                     SettingsSectionCard(
                                         title = "Color Theme Engine",
-                                        subtitle = "Choose how the app dynamically tints backgrounds, controls, and Mix Studio"
+                                        subtitle = "Choose how the app dynamically tints backgrounds, controls, and visualizers"
                                     ) {
                                         val themeOptions = listOf(
+                                            Triple(
+                                                AppSettings.THEME_LIQUID_GLASS,
+                                                "Liquid Glass (Apple Fluid)",
+                                                "Translucent frosted glass aesthetics with fluid specular reflections, chromatic glow, and organic physics"
+                                            ),
                                             Triple(
                                                 AppSettings.THEME_MATERIAL_YOU,
                                                 "Material You (Monet System Accent)",
@@ -286,17 +489,28 @@ fun SettingsScreen(
                                         themeOptions.forEach { (engineKey, title, description) ->
                                             val isSelected = settings.themeEngine == engineKey
                                             Card(
-                                                shape = RoundedCornerShape(12.dp),
+                                                shape = RoundedCornerShape(14.dp),
                                                 colors = CardDefaults.cardColors(
-                                                    containerColor = if (isSelected) ElectricViolet.copy(alpha = 0.20f) else DeepPurpleDark
+                                                    containerColor = if (isSelected) {
+                                                        if (isLiquidGlass) Color(0x3500F0FF) else ElectricViolet.copy(alpha = 0.20f)
+                                                    } else {
+                                                        if (isLiquidGlass) Color(0x180B1C2E) else DeepPurpleDark
+                                                    }
                                                 ),
                                                 modifier = Modifier
                                                     .fillMaxWidth()
                                                     .padding(vertical = 4.dp)
-                                                    .then(
-                                                        if (isSelected) {
-                                                            Modifier.border(1.dp, ElectricVioletLight, RoundedCornerShape(12.dp))
-                                                        } else Modifier
+                                                    .border(
+                                                        width = if (isSelected) 1.2.dp else 0.8.dp,
+                                                        brush = if (isSelected) {
+                                                            if (isLiquidGlass) {
+                                                                Brush.linearGradient(listOf(Color(0xFFFFFFFF), Color(0xFF00F0FF), Color(0xAAFFFFFF)))
+                                                            } else Brush.linearGradient(listOf(ElectricVioletLight, ElectricViolet))
+                                                        } else {
+                                                            if (isLiquidGlass) Brush.linearGradient(listOf(Color(0x25FFFFFF), Color(0x1800F0FF)))
+                                                            else Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                                        },
+                                                        shape = RoundedCornerShape(14.dp)
                                                     )
                                                     .clickable {
                                                         onSettingsChanged(
@@ -320,6 +534,7 @@ fun SettingsScreen(
                                                             .clip(CircleShape)
                                                             .background(
                                                                 when (engineKey) {
+                                                                    AppSettings.THEME_LIQUID_GLASS -> Color(0xFF00F0FF)
                                                                     AppSettings.THEME_MATERIAL_YOU -> Color(0xFF38BDF8)
                                                                     AppSettings.THEME_DARK_CONTRAST -> Color(0xFFFFB700)
                                                                     AppSettings.THEME_CITIVIEW -> Color(0xFF00E5FF)
@@ -601,32 +816,15 @@ fun SettingsScreen(
 
                                         Spacer(modifier = Modifier.height(12.dp))
 
-                                        Row(
+                                        Button(
+                                            onClick = onOpenEqualizer,
                                             modifier = Modifier.fillMaxWidth(),
-                                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                            colors = ButtonDefaults.buttonColors(containerColor = ElectricViolet),
+                                            shape = RoundedCornerShape(10.dp)
                                         ) {
-                                            Button(
-                                                onClick = onOpenEqualizer,
-                                                modifier = Modifier.weight(1f),
-                                                colors = ButtonDefaults.buttonColors(containerColor = ElectricViolet),
-                                                shape = RoundedCornerShape(10.dp)
-                                            ) {
-                                                Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(16.dp))
-                                                Spacer(modifier = Modifier.width(6.dp))
-                                                Text("Open Equalizer", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                            }
-
-                                            FilledTonalButton(
-                                                onClick = onOpenMixStudio,
-                                                modifier = Modifier.weight(1f),
-                                                colors = ButtonDefaults.filledTonalButtonColors(
-                                                    containerColor = DeepPurpleDark,
-                                                    contentColor = ElectricVioletLight
-                                                ),
-                                                shape = RoundedCornerShape(10.dp)
-                                            ) {
-                                                Text("Mix Studio", fontSize = 12.sp, fontWeight = FontWeight.Bold)
-                                            }
+                                            Icon(Icons.Default.Tune, contentDescription = null, modifier = Modifier.size(16.dp))
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Text("Open Equalizer & DSP", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                                         }
 
                                         Spacer(modifier = Modifier.height(8.dp))
@@ -727,22 +925,81 @@ private fun SettingsSectionCard(
     subtitle: String,
     content: @Composable () -> Unit
 ) {
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+
+    val infiniteTransition = rememberInfiniteTransition(label = "section_glass_anim")
+    val sheenProgress by infiniteTransition.animateFloat(
+        initialValue = -0.6f,
+        targetValue = 1.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3500, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "section_sheen_sweep"
+    )
+
     Card(
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DeepPurpleCard),
-        modifier = Modifier.fillMaxWidth()
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isLiquidGlass) Color(0x220D1B2D) else DeepPurpleCard
+        ),
+        border = androidx.compose.foundation.BorderStroke(
+            width = 1.2.dp,
+            brush = if (isLiquidGlass) {
+                Brush.linearGradient(
+                    listOf(
+                        Color(0x80FFFFFF),
+                        Color(0x4000F0FF),
+                        Color(0x18FFFFFF),
+                        Color(0x5500F0FF),
+                        Color(0x75FFFFFF)
+                    )
+                )
+            } else {
+                Brush.linearGradient(
+                    listOf(
+                        theme.divider.copy(alpha = 0.4f),
+                        theme.surfaceVariant.copy(alpha = 0.2f)
+                    )
+                )
+            }
+        ),
+        modifier = Modifier
+            .fillMaxWidth()
+            .drawWithContent {
+                drawContent()
+                if (isLiquidGlass) {
+                    val sheenWidth = size.width * 0.5f
+                    val sheenX = (sheenProgress * (size.width + sheenWidth)) - sheenWidth
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                Color(0x12FFFFFF),
+                                Color(0x2200F0FF),
+                                Color(0x15FFFFFF),
+                                Color.Transparent
+                            ),
+                            start = Offset(sheenX, 0f),
+                            end = Offset(sheenX + sheenWidth, size.height)
+                        ),
+                        blendMode = BlendMode.Screen
+                    )
+                }
+            }
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Text(
                 text = title,
-                color = TextPrimary,
+                color = if (isLiquidGlass) Color.White else TextPrimary,
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = subtitle,
-                color = TextTertiary,
+                color = if (isLiquidGlass) Color(0xB300F0FF) else TextTertiary,
                 fontSize = 11.sp
             )
             Spacer(modifier = Modifier.height(14.dp))

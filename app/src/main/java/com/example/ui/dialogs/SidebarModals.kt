@@ -359,7 +359,7 @@ fun AboutDialog(onDismiss: () -> Unit) {
                     fontWeight = FontWeight.Bold
                 )
                 Text(
-                    text = "A high-performance offline music player engineered with bit-perfect audio architecture, Mix Studio DJ transition & automix editor, 4-slot multi-queue setter, full-screen tabbed settings, switchable 5/10-band equalizer, and responsive home screen widgets.",
+                    text = "A high-performance offline music player engineered with bit-perfect audio architecture, Liquid Glass fluid theme, full-screen tabbed settings, switchable 5/10-band equalizer, and responsive home screen widgets.",
                     color = TextSecondary,
                     fontSize = 13.sp,
                     lineHeight = 18.sp

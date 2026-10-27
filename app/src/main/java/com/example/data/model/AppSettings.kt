@@ -50,6 +50,7 @@ data class AppSettings(
         const val THEME_DARK_CONTRAST = "dark_contrast" // "Hashtag theme"
         const val THEME_ALBUM_ART = "album_art"
         const val THEME_CITIVIEW = "citiview"
+        const val THEME_LIQUID_GLASS = "liquid_glass"
 
         // Visualizer Styles
         const val VIS_STYLE_FL_BARS = "fl_bars"

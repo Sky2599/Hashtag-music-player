@@ -37,12 +37,28 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.LinearOutSlowInEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.example.ui.theme.LocalAppTheme
+import kotlin.math.cos
+import kotlin.math.max
+import kotlin.math.sin
 import com.example.ui.components.AppBottomBar
 import com.example.ui.components.AppNavigationRail
 import com.example.ui.components.AppSidebar
@@ -57,8 +73,6 @@ import com.example.ui.dialogs.ChangelogDialog
 import com.example.ui.dialogs.ProSleepTimerDialog
 import com.example.ui.dialogs.EqualizerDialog
 import com.example.ui.dialogs.FoldersDialog
-import com.example.ui.dialogs.MixStudioDialog
-import com.example.ui.dialogs.MultiQueueSwitcherDialog
 import com.example.ui.dialogs.PlayingQueueDialog
 import com.example.ui.dialogs.PrecisionPlaybackDialog
 import com.example.ui.dialogs.TagEditorDialog
@@ -66,7 +80,6 @@ import com.example.ui.screens.AlbumsScreen
 import com.example.ui.screens.ArtistsScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.ListeningStatsScreen
-import com.example.ui.screens.MultiQueueScreen
 import com.example.ui.screens.NowPlayingScreen
 import com.example.ui.screens.SettingsScreen
 import com.example.ui.screens.SongsScreen
@@ -144,6 +157,75 @@ class MainActivity : ComponentActivity() {
         super.onStop()
         musicViewModel.persistCurrentPlaybackState()
     }
+@Composable
+private fun ShiftingAmbientBackground(
+    modifier: Modifier = Modifier,
+    content: @Composable () -> Unit
+) {
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+
+    val animSpec = tween<Color>(durationMillis = 1400, easing = LinearOutSlowInEasing)
+    val animPrimary by animateColorAsState(theme.primary, animSpec, label = "bg_primary")
+    val animPrimaryDim by animateColorAsState(theme.primaryDim, animSpec, label = "bg_primary_dim")
+    val animBgDark by animateColorAsState(theme.backgroundDark, animSpec, label = "bg_dark")
+
+    val bgAnim = rememberInfiniteTransition(label = "ambient_bg_shift")
+    val shiftPhase by bgAnim.animateFloat(
+        initialValue = 0f,
+        targetValue = (2 * Math.PI).toFloat(),
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 16000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "shift_phase"
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .drawBehind {
+                val w = size.width
+                val h = size.height
+
+                // Base deep dark tone
+                drawRect(color = animBgDark)
+
+                // 1. Primary atmospheric chromatic bloom shifting based on album art palette
+                val orb1X = w * (0.32f + 0.18f * sin(shiftPhase))
+                val orb1Y = h * (0.24f + 0.12f * cos(shiftPhase))
+                val radius1 = max(w, h) * 0.85f
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            animPrimaryDim.copy(alpha = if (isLiquidGlass) 0.40f else 0.22f),
+                            animPrimary.copy(alpha = if (isLiquidGlass) 0.20f else 0.09f),
+                            Color.Transparent
+                        ),
+                        center = Offset(orb1X, orb1Y),
+                        radius = radius1
+                    )
+                )
+
+                // 2. Secondary subtle ambient accent bloom from bottom-right
+                val orb2X = w * (0.75f - 0.15f * cos(shiftPhase))
+                val orb2Y = h * (0.76f - 0.10f * sin(shiftPhase))
+                val radius2 = max(w, h) * 0.70f
+                drawCircle(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            animPrimary.copy(alpha = if (isLiquidGlass) 0.22f else 0.12f),
+                            if (isLiquidGlass) Color(0x1800F0FF) else animPrimaryDim.copy(alpha = 0.10f),
+                            Color.Transparent
+                        ),
+                        center = Offset(orb2X, orb2Y),
+                        radius = radius2
+                    )
+                )
+            }
+    ) {
+        content()
+    }
 }
 
 @OptIn(ExperimentalFoundationApi::class)
@@ -166,12 +248,11 @@ fun MusicApp(viewModel: MusicViewModel) {
 
     val equalizerState by viewModel.equalizerState.collectAsState()
     val showEqualizerDialog by viewModel.showEqualizerDialog.collectAsState()
-    val showMixStudioDialog by viewModel.showMixStudioDialog.collectAsState()
     val showPrecisionPlaybackDialog by viewModel.showPrecisionPlaybackDialog.collectAsState()
 
-    // High-frequency playback streams: only observe when Now Playing (tab 2), Equalizer, or Mix Studio is visible
+    // High-frequency playback streams: only observe when Now Playing (tab 2) or Equalizer is visible
     // to prevent 60fps/25fps recomposition storms while scrolling library tabs
-    val currentPositionMs by if (currentTab == 2 || showMixStudioDialog || showPrecisionPlaybackDialog) {
+    val currentPositionMs by if (currentTab == 2 || showPrecisionPlaybackDialog) {
         viewModel.currentPositionMs.collectAsState()
     } else {
         remember { mutableLongStateOf(0L) }
@@ -183,7 +264,7 @@ fun MusicApp(viewModel: MusicViewModel) {
         remember { mutableStateOf(FloatArray(21) { 0.05f }) }
     }
 
-    val crossfadeProgress by if (currentTab == 2 || showMixStudioDialog) {
+    val crossfadeProgress by if (currentTab == 2) {
         viewModel.crossfadeProgress.collectAsState()
     } else {
         remember { mutableFloatStateOf(0f) }
@@ -202,7 +283,6 @@ fun MusicApp(viewModel: MusicViewModel) {
     val showAboutDialog by viewModel.showAboutDialog.collectAsState()
     val showChangelogDialog by viewModel.showChangelogDialog.collectAsState()
     val showSleepTimerDialog by viewModel.showSleepTimerDialog.collectAsState()
-    val showMultiQueueDialog by viewModel.showMultiQueueDialog.collectAsState()
     val showTagEditorDialog by viewModel.showTagEditorDialog.collectAsState()
 
     // Custom Playlists State
@@ -223,7 +303,7 @@ fun MusicApp(viewModel: MusicViewModel) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
 
-    val titles = listOf("LIBRARY", "Albums", "Now Playing", "Artists", "Songs", "Multi-Queues")
+    val titles = listOf("LIBRARY", "Albums", "Now Playing", "Artists", "Songs")
 
     // Zero-latency Horizontal Pager for Main Bottom Tabs (0..4)
     val pagerState = rememberPagerState(
@@ -258,39 +338,6 @@ fun MusicApp(viewModel: MusicViewModel) {
 
     val activeTabContent: @Composable () -> Unit = {
         CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
-            if (currentTab == 5) {
-                MultiQueueScreen(
-                queues = queueSlots,
-                activeSlotIndex = activeQueueSlotIndex,
-                allSongs = allSongs,
-                currentSong = currentSong,
-                isPlaying = isPlaying,
-                onActivateQueueSlot = { slotIdx, startIdx ->
-                    viewModel.switchQueueSlot(slotIdx, startIdx)
-                },
-                onAddSongsToSlot = { slotIdx, songs ->
-                    viewModel.addSongsToQueueSlot(slotIdx, songs)
-                },
-                onRemoveSongFromSlot = { slotIdx, itemIdx ->
-                    viewModel.removeSongFromQueueSlot(slotIdx, itemIdx)
-                },
-                onMoveSongInSlot = { slotIdx, fromIdx, toIdx ->
-                    viewModel.moveSongInQueueSlot(slotIdx, fromIdx, toIdx)
-                },
-                onShuffleSlot = { slotIdx ->
-                    viewModel.shuffleQueueSlot(slotIdx)
-                },
-                onClearSlot = { slotIdx ->
-                    viewModel.clearQueueSlot(slotIdx)
-                },
-                onRenameSlot = { slotIdx, newName ->
-                    viewModel.renameQueueSlot(slotIdx, newName)
-                },
-                onDuplicateSlot = { fromIdx, toIdx ->
-                    viewModel.duplicateQueueSlot(fromIdx, toIdx)
-                }
-            )
-        } else {
             val configuration = LocalConfiguration.current
             val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
             HorizontalPager(
@@ -361,7 +408,6 @@ fun MusicApp(viewModel: MusicViewModel) {
                         showAudioPipelineInNowPlaying = appSettings.showAudioPipelineInNowPlaying,
                         onOpenPrecisionPlayback = { viewModel.setPrecisionPlaybackDialogVisible(true) },
                         onOpenSleepTimer = { viewModel.setSleepTimerDialogVisible(true) },
-                        onOpenMultiQueue = { viewModel.selectTab(5) },
                         onOpenTagEditor = { viewModel.setTagEditorDialogVisible(true) },
                         onOpenEqualizer = { viewModel.setEqualizerDialogVisible(true) }
                     )
@@ -386,7 +432,6 @@ fun MusicApp(viewModel: MusicViewModel) {
                         onSearchQueryChange = { viewModel.setSearchQuery(it) }
                     )
                 }
-                }
             }
         }
     }
@@ -401,9 +446,7 @@ fun MusicApp(viewModel: MusicViewModel) {
                     when (item) {
                         SidebarItem.LIBRARY -> viewModel.selectTab(0)
                         SidebarItem.FOLDERS -> viewModel.setFoldersDialogVisible(true)
-                        SidebarItem.PLAYING_QUEUE -> viewModel.selectTab(5)
                         SidebarItem.EQUALISER -> viewModel.setEqualizerDialogVisible(true)
-                        SidebarItem.MIX_STUDIO -> viewModel.setMixStudioDialogVisible(true)
                         SidebarItem.LISTENING_STATS -> viewModel.setStatsDialogVisible(true)
                         SidebarItem.SCAN_MEDIA -> viewModel.triggerRescan()
                         SidebarItem.SETTINGS -> viewModel.setSettingsDialogVisible(true)
@@ -418,7 +461,8 @@ fun MusicApp(viewModel: MusicViewModel) {
         }
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val configuration = LocalConfiguration.current
+            ShiftingAmbientBackground {
+                val configuration = LocalConfiguration.current
             val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
             val isTablet = maxWidth >= 720.dp
             val useSideRail = isTablet || isLandscape
@@ -441,6 +485,7 @@ fun MusicApp(viewModel: MusicViewModel) {
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxHeight(),
+                        containerColor = Color.Transparent,
                         contentWindowInsets = WindowInsets(0, 0, 0, 0),
                         topBar = {
                             if (currentTab != 2) {
@@ -468,7 +513,7 @@ fun MusicApp(viewModel: MusicViewModel) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
-                                .background(DeepPurple)
+                                .background(Color.Transparent)
                                 .padding(innerPadding)
                         ) {
                             activeTabContent()
@@ -479,6 +524,7 @@ fun MusicApp(viewModel: MusicViewModel) {
                 // Mobile Handheld Layout: Top Bar + Content + Bottom Bar with docked MiniPlayer
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
+                    containerColor = Color.Transparent,
                     contentWindowInsets = WindowInsets(0, 0, 0, 0),
                     topBar = {
                         if (currentTab != 2) {
@@ -496,7 +542,7 @@ fun MusicApp(viewModel: MusicViewModel) {
                         val configuration = LocalConfiguration.current
                         val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
                         if (!isLandscape) {
-                            Column(modifier = Modifier.background(DeepPurple)) {
+                            Column(modifier = Modifier.background(Color.Transparent)) {
                                 if (currentSong != null && currentTab != 2) {
                                     MiniPlayer(
                                         currentSong = currentSong,
@@ -516,13 +562,15 @@ fun MusicApp(viewModel: MusicViewModel) {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(DeepPurple)
+                            .background(Color.Transparent)
                             .padding(innerPadding)
                     ) {
                         activeTabContent()
                     }
                 }
             }
+        }
+    }
 
                 // Full-Screen Tabbed Settings Page
                 if (showSettingsDialog) {
@@ -543,10 +591,6 @@ fun MusicApp(viewModel: MusicViewModel) {
                         onOpenFolders = {
                             viewModel.setSettingsDialogVisible(false)
                             viewModel.setFoldersDialogVisible(true)
-                        },
-                        onOpenMixStudio = {
-                            viewModel.setSettingsDialogVisible(false)
-                            viewModel.setMixStudioDialogVisible(true)
                         },
                         onResetPlaybackSpeedAndPitch = {
                             viewModel.setPlaybackSpeed(1.0f)
@@ -628,43 +672,6 @@ fun MusicApp(viewModel: MusicViewModel) {
                     ChangelogDialog(onDismiss = { viewModel.setChangelogDialogVisible(false) })
                 }
 
-                // Mix Studio / DJ Transitions Dialog
-                if (showMixStudioDialog) {
-                    MixStudioDialog(
-                        currentSong = currentSong,
-                        queue = queue,
-                        queueIndex = queueIndex,
-                        allSongs = allSongs,
-                        isPlaying = isPlaying,
-                        currentPositionMs = currentPositionMs,
-                        crossfadeProgress = crossfadeProgress,
-                        crossfadeSeconds = equalizerState.crossfadeSeconds,
-                        playlists = customPlaylists,
-                        onCrossfadeChange = { viewModel.setCrossfade(it) },
-                        onTogglePlayPause = { viewModel.togglePlayPause() },
-                        onPlaySong = { song, queueList -> viewModel.playSong(song, queueList) },
-                        onStartTransitionPreview = { outSong, inSong, durSec, startProg, profile ->
-                            viewModel.startMixTransitionPreview(outSong, inSong, durSec, startProg, profile)
-                        },
-                        onSeekTransitionPreview = { outSong, durSec, prog ->
-                            viewModel.seekMixTransitionPreview(outSong, durSec, prog)
-                        },
-                        onStopTransitionPreview = {
-                            viewModel.stopMixTransitionPreview()
-                        },
-                        onSavePlaylistTransition = { transition ->
-                            viewModel.savePlaylistTransition(transition)
-                        },
-                        onSetAudioMuted = { viewModel.setAudioMuted(it) },
-                        onToggleFavorite = { viewModel.toggleFavorite(it) },
-                        onApplyBandLevel = { bandIndex, levelMb ->
-                            viewModel.setEqualizerEnabled(true)
-                            viewModel.setBandLevel(bandIndex, levelMb)
-                        },
-                        onDismiss = { viewModel.setMixStudioDialogVisible(false) }
-                    )
-                }
-
                 // Precision Playback Dialog (A-B Repeat, Speed, Pitch)
                 if (showPrecisionPlaybackDialog) {
                     PrecisionPlaybackDialog(
@@ -689,21 +696,6 @@ fun MusicApp(viewModel: MusicViewModel) {
                         },
                         onCancelTimer = { viewModel.cancelSleepTimer() },
                         onDismiss = { viewModel.setSleepTimerDialogVisible(false) }
-                    )
-                }
-
-                // Multi-Queue Switcher Dialog
-                if (showMultiQueueDialog) {
-                    MultiQueueSwitcherDialog(
-                        queues = queueSlots,
-                        activeSlotIndex = activeQueueSlotIndex,
-                        onSwitchQueue = { viewModel.switchQueueSlot(it) },
-                        onSelectSong = { viewModel.playSong(it) },
-                        onOpenFullMultiQueueTab = {
-                            viewModel.setMultiQueueDialogVisible(false)
-                            viewModel.selectTab(5)
-                        },
-                        onDismiss = { viewModel.setMultiQueueDialogVisible(false) }
                     )
                 }
 

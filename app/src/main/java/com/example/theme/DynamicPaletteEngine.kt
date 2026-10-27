@@ -106,6 +106,26 @@ object DynamicPaletteEngine {
         contrastRatio = 11.5f
     )
 
+    // 3. Apple Liquid Glass Theme (Translucent Sapphire Frosted Glass + Crystal Aqua Cyan + Prismatic Specular Highlights)
+    val liquidGlassTheme = AppThemeColors(
+        primary = Color(0xFF00F0FF), // Luminous Crystal Liquid Cyan
+        primaryLight = Color(0xFFD6FAFF), // Specular Crystal Sheen
+        primaryDim = Color(0xFF0C3D52), // Oceanic Subsurface Refraction
+        background = Color(0xFF080D1A), // Deep Subsurface Glass Void
+        backgroundDark = Color(0xFF040710), // Obsidian Glass Shadow
+        surface = Color(0xFF10192B), // Frosted Glass Surface
+        surfaceVariant = Color(0xFF192640), // Elevated Glass Layer
+        card = Color(0xFF142036), // Frosted Glass Card Base
+        textPrimary = Color(0xFFFFFFFF), // Pure Diamond Crystal
+        textSecondary = Color(0xFFCAD5E2), // Frosted Platinum Silver
+        textTertiary = Color(0xFF7A8FA6), // Glass Mist
+        divider = Color(0x3300F0FF), // Specular Glass Edge Highlight
+        onPrimary = Color(0xFF02171E),
+        onPrimaryContainer = Color(0xFFE0FBFF),
+        toneProfileLabel = "Liquid Glass (Apple Fluid)",
+        contrastRatio = 12.8f
+    )
+
     // Sleek Onyx / Slate theme fallback
     val defaultTheme = defaultDarkContrastTheme
 
@@ -207,6 +227,9 @@ object DynamicPaletteEngine {
             }
             AppSettings.THEME_CITIVIEW -> {
                 citiviewTheme
+            }
+            AppSettings.THEME_LIQUID_GLASS -> {
+                liquidGlassTheme
             }
             AppSettings.THEME_ALBUM_ART -> {
                 extractThemeColors(context, song)

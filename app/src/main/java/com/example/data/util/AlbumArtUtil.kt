@@ -25,46 +25,95 @@ object AlbumArtUtil {
             var retriever: MediaMetadataRetriever? = null
             try {
                 retriever = MediaMetadataRetriever()
-                if (songPath.isNotEmpty() && File(songPath).exists()) {
-                    retriever.setDataSource(songPath)
-                } else {
-                    retriever.setDataSource(context, Uri.parse(songUri))
+                var initialized = false
+                if (songPath.isNotEmpty()) {
+                    try {
+                        retriever.setDataSource(songPath)
+                        initialized = true
+                    } catch (_: Throwable) {}
                 }
-                val pic = retriever.embeddedPicture
-                if (pic != null && pic.isNotEmpty()) {
-                    memoryCache.put(cacheKey, pic)
-                    return@withContext pic
+                if (!initialized && songUri.isNotEmpty()) {
+                    try {
+                        retriever.setDataSource(context, Uri.parse(songUri))
+                        initialized = true
+                    } catch (_: Throwable) {}
                 }
-            } catch (e: Exception) {
-                // Ignore and try MediaStore fallback
+                if (initialized) {
+                    val pic = retriever.embeddedPicture
+                    if (pic != null && pic.isNotEmpty()) {
+                        memoryCache.put(cacheKey, pic)
+                        return@withContext pic
+                    }
+                }
+            } catch (_: Throwable) {
             } finally {
                 try {
                     retriever?.release()
-                } catch (ignored: Throwable) {}
+                } catch (_: Throwable) {}
             }
 
-            // 2. On Android 10+ (API 29+), use ContentResolver.loadThumbnail for high-res 1024x1024 art
+            // 2. High-res folder master artwork (cover.jpg, folder.jpg, front.jpg, etc.) in the song's album directory
+            if (songPath.isNotEmpty()) {
+                try {
+                    val songFile = File(songPath)
+                    val parent = songFile.parentFile
+                    if (parent != null && parent.isDirectory && parent.canRead()) {
+                        val candidates = listOf("cover.jpg", "cover.png", "folder.jpg", "folder.png", "front.jpg", "front.png", "album.jpg", "album.png", "artwork.jpg")
+                        for (candidate in candidates) {
+                            val f = File(parent, candidate)
+                            if (f.exists() && f.length() > 2048) {
+                                val bytes = f.readBytes()
+                                if (bytes.isNotEmpty()) {
+                                    memoryCache.put(cacheKey, bytes)
+                                    return@withContext bytes
+                                }
+                            }
+                        }
+                    }
+                } catch (_: Throwable) {}
+            }
+
+            // 3. On Android 10+ (API 29+), use ContentResolver.loadThumbnail for high-res 1440x1440 art
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q && songUri.isNotEmpty()) {
                 try {
                     val bmp = context.contentResolver.loadThumbnail(
                         Uri.parse(songUri),
-                        android.util.Size(1024, 1024),
+                        android.util.Size(1440, 1440),
                         null
                     )
                     val bos = java.io.ByteArrayOutputStream()
-                    bmp.compress(Bitmap.CompressFormat.JPEG, 95, bos)
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 98, bos)
                     val bytes = bos.toByteArray()
                     if (bytes.isNotEmpty()) {
                         memoryCache.put(cacheKey, bytes)
                         return@withContext bytes
                     }
-                } catch (_: Throwable) {
-                    // Fall through to MediaStore fallback
-                }
+                } catch (_: Throwable) {}
             }
 
-            // 3. Try legacy MediaStore audio album art Uri
+            // 4. Try MediaStore album art via Android 10+ Albums API or legacy albumart Uri
             if (albumId > 0) {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    try {
+                        val albumUri = ContentUris.withAppendedId(
+                            android.provider.MediaStore.Audio.Albums.EXTERNAL_CONTENT_URI,
+                            albumId
+                        )
+                        val bmp = context.contentResolver.loadThumbnail(
+                            albumUri,
+                            android.util.Size(1440, 1440),
+                            null
+                        )
+                        val bos = java.io.ByteArrayOutputStream()
+                        bmp.compress(Bitmap.CompressFormat.JPEG, 98, bos)
+                        val bytes = bos.toByteArray()
+                        if (bytes.isNotEmpty()) {
+                            memoryCache.put(cacheKey, bytes)
+                            return@withContext bytes
+                        }
+                    } catch (_: Throwable) {}
+                }
+
                 try {
                     val artUri = ContentUris.withAppendedId(
                         Uri.parse("content://media/external/audio/albumart"),
@@ -77,9 +126,7 @@ object AlbumArtUtil {
                             return@withContext bytes
                         }
                     }
-                } catch (e: Exception) {
-                    // Not available in MediaStore cache
-                }
+                } catch (_: Exception) {}
             }
 
             null
@@ -90,7 +137,11 @@ object AlbumArtUtil {
             val bytes = getArtworkBytes(context, songPath, songUri, albumId)
             if (bytes != null) {
                 try {
-                    val opts = BitmapFactory.Options().apply { inSampleSize = 2 }
+                    val opts = BitmapFactory.Options().apply {
+                        inSampleSize = 1
+                        inPreferredConfig = Bitmap.Config.ARGB_8888
+                        inDither = true
+                    }
                     return@withContext BitmapFactory.decodeByteArray(bytes, 0, bytes.size, opts)
                 } catch (e: Exception) {
                     Log.w(TAG, "Failed decoding artwork bitmap: ${e.message}")

@@ -456,6 +456,7 @@ private fun HomeJumpBackInCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 AlbumArtContainer(
+                    song = resumeTrack,
                     albumArtUri = resumeTrack.albumArtUri,
                     size = 52.dp,
                     cornerRadius = 10.dp,

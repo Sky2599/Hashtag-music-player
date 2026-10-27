@@ -9,11 +9,23 @@ import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlendMode
+import androidx.compose.ui.graphics.CompositingStrategy
+import androidx.compose.ui.graphics.graphicsLayer
+import com.example.ui.theme.LocalAppTheme
 import androidx.compose.foundation.pager.VerticalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -456,14 +468,6 @@ fun NowPlayingScreen(
                                         }
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Multi-Queue Switcher", color = TextPrimary) },
-                                        leadingIcon = { Icon(Icons.Default.Layers, contentDescription = null, tint = ElectricVioletLight) },
-                                        onClick = {
-                                            showOptionsMenu = false
-                                            onOpenMultiQueue?.invoke()
-                                        }
-                                    )
-                                    DropdownMenuItem(
                                         text = { Text("Edit Metadata / Tags", color = TextPrimary) },
                                         leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = ElectricVioletLight) },
                                         onClick = {
@@ -749,25 +753,17 @@ fun NowPlayingScreen(
                             )
                         }
 
-                        // Central Play/Pause button: 72dp with 40dp icon
-                        IconButton(
+                        // Central Liquid Glass Reflective Play/Pause button: 72dp with 40dp icon
+                        ReflectivePlayPauseButton(
+                            isPlaying = isPlaying,
+                            sizeDp = 72.dp,
+                            iconSizeDp = 40.dp,
                             onClick = {
                                 TactileHaptics.lightImpact(npView)
                                 onPlayPauseClick()
                             },
-                            modifier = Modifier
-                                .size(72.dp)
-                                .clip(CircleShape)
-                                .background(ElectricViolet)
-                                .testTag("now_playing_play_pause_button")
-                        ) {
-                            Icon(
-                                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = if (isPlaying) "Pause" else "Play",
-                                tint = OnPrimaryAccent,
-                                modifier = Modifier.size(40.dp)
-                            )
-                        }
+                            testTag = "now_playing_play_pause_button"
+                        )
 
                         IconButton(
                             onClick = {
@@ -1075,14 +1071,6 @@ private fun NowPlayingLandscapeLayout(
                             onClick = {
                                 showOptionsMenu = false
                                 onOpenSleepTimer?.invoke()
-                            }
-                        )
-                        DropdownMenuItem(
-                            text = { Text("Multi-Queue Switcher", color = TextPrimary) },
-                            leadingIcon = { Icon(Icons.Default.Layers, contentDescription = null, tint = ElectricVioletLight) },
-                            onClick = {
-                                showOptionsMenu = false
-                                onOpenMultiQueue?.invoke()
                             }
                         )
                         DropdownMenuItem(
@@ -1431,23 +1419,14 @@ private fun NowPlayingLandscapeLayout(
                     )
                 }
 
-                // Central Play/Pause FAB
-                Box(
-                    modifier = Modifier
-                        .size(52.dp)
-                        .clip(CircleShape)
-                        .background(ElectricViolet)
-                        .clickable { onPlayPauseClick() }
-                        .testTag("now_playing_landscape_play_pause"),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                        contentDescription = if (isPlaying) "Pause" else "Play",
-                        tint = OnPrimaryAccent,
-                        modifier = Modifier.size(32.dp)
-                    )
-                }
+                // Central Liquid Glass Reflective Play/Pause FAB
+                ReflectivePlayPauseButton(
+                    isPlaying = isPlaying,
+                    sizeDp = 52.dp,
+                    iconSizeDp = 32.dp,
+                    onClick = onPlayPauseClick,
+                    testTag = "now_playing_landscape_play_pause"
+                )
 
                 IconButton(
                     onClick = onNextClick,
@@ -1889,6 +1868,132 @@ private fun FullScreenVisualizerLandscapeView(
                     .weight(1f)
                     .fillMaxHeight()
                     .padding(start = 10.dp)
+            )
+        }
+    }
+}
+
+/**
+ * Liquid Glass Reflective Play/Pause Button:
+ * - Elevated frosted liquid glass orb with radial gradient and specular dual rim
+ * - Animated specular light sheen sweep running across the glass orb
+ * - Specular reflection directly on the Play/Pause icon glyphs using CompositingStrategy.Offscreen + BlendMode.SrcAtop
+ *   so the icon itself gleams with crystalline liquid glass reflections!
+ */
+@Composable
+private fun ReflectivePlayPauseButton(
+    isPlaying: Boolean,
+    sizeDp: androidx.compose.ui.unit.Dp,
+    iconSizeDp: androidx.compose.ui.unit.Dp,
+    onClick: () -> Unit,
+    testTag: String,
+    modifier: Modifier = Modifier
+) {
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+
+    val infiniteTransition = rememberInfiniteTransition(label = "play_pause_sheen")
+    val sheenProgress by infiniteTransition.animateFloat(
+        initialValue = -0.6f,
+        targetValue = 1.8f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2400, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "orb_sheen_sweep"
+    )
+
+    Box(
+        modifier = modifier
+            .size(sizeDp)
+            .clip(CircleShape)
+            .background(
+                if (isLiquidGlass) {
+                    Brush.radialGradient(
+                        listOf(
+                            Color(0x7000F0FF),
+                            Color(0x3800B4D8),
+                            Color(0x22051525)
+                        )
+                    )
+                } else {
+                    Brush.radialGradient(
+                        listOf(
+                            theme.primary,
+                            theme.primaryDim
+                        )
+                    )
+                }
+            )
+            .border(
+                width = 1.5.dp,
+                brush = Brush.linearGradient(
+                    listOf(
+                        Color(0xE6FFFFFF),
+                        if (isLiquidGlass) Color(0x9000F0FF) else theme.primaryLight.copy(alpha = 0.8f),
+                        Color(0x40FFFFFF),
+                        if (isLiquidGlass) Color(0xB000F0FF) else theme.primary.copy(alpha = 0.6f),
+                        Color(0xCCFFFFFF)
+                    )
+                ),
+                shape = CircleShape
+            )
+            .drawWithContent {
+                drawContent()
+                // Orb specular reflection sweep
+                val sheenW = size.width * 0.6f
+                val sheenX = (sheenProgress * (size.width + sheenW)) - sheenW
+                drawCircle(
+                    brush = Brush.linearGradient(
+                        colors = listOf(
+                            Color.Transparent,
+                            Color(0x35FFFFFF),
+                            Color(0x60FFFFFF),
+                            Color.Transparent
+                        ),
+                        start = Offset(sheenX, 0f),
+                        end = Offset(sheenX + sheenW, size.height)
+                    ),
+                    blendMode = BlendMode.Screen
+                )
+            }
+            .clickable(onClick = onClick)
+            .testTag(testTag),
+        contentAlignment = Alignment.Center
+    ) {
+        // Reflective Play/Pause Icon with crystalline specular sheen
+        Box(
+            modifier = Modifier
+                .size(iconSizeDp)
+                .graphicsLayer {
+                    compositingStrategy = CompositingStrategy.Offscreen
+                }
+                .drawWithContent {
+                    drawContent()
+                    // Draw liquid glass specular sheen across the icon glyph
+                    val iconSheenW = size.width * 0.7f
+                    val iconSheenX = (sheenProgress * (size.width + iconSheenW)) - iconSheenW
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color.Transparent,
+                                if (isLiquidGlass) Color(0xCCFFFFFF) else Color(0x99FFFFFF),
+                                if (isLiquidGlass) Color(0xEE00F0FF) else Color(0x88FFFFFF),
+                                Color.Transparent
+                            ),
+                            start = Offset(iconSheenX, 0f),
+                            end = Offset(iconSheenX + iconSheenW, size.height)
+                        ),
+                        blendMode = BlendMode.SrcAtop
+                    )
+                },
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                contentDescription = if (isPlaying) "Pause" else "Play",
+                tint = if (isLiquidGlass) Color.White else OnPrimaryAccent,
+                modifier = Modifier.fillMaxSize()
             )
         }
     }

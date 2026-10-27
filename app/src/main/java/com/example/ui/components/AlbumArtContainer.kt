@@ -53,7 +53,53 @@ fun AlbumArtContainer(
     val density = LocalDensity.current
     val shape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
 
-    val effectiveModel = albumArtUri ?: song?.customArtworkUri ?: song?.albumArtUri
+    // High-resolution artwork bytes from embedded ID3/FLAC master tags or folder art
+    var highResArtwork by remember(song?.id, song?.path, song?.customArtworkUri, albumArtUri) {
+        mutableStateOf<Any?>(null)
+    }
+
+    LaunchedEffect(song?.id, song?.path, song?.uri, song?.customArtworkUri, albumArtUri) {
+        if (!song?.customArtworkUri.isNullOrEmpty()) {
+            highResArtwork = Uri.parse(song!!.customArtworkUri)
+            return@LaunchedEffect
+        }
+        if (song != null) {
+            val bytes = AlbumArtUtil.getArtworkBytes(
+                context = context,
+                songPath = song.path,
+                songUri = song.uri,
+                albumId = song.albumId
+            )
+            if (bytes != null) {
+                highResArtwork = bytes
+                return@LaunchedEffect
+            }
+        }
+        if (albumArtUri != null) {
+            val uriStr = albumArtUri.toString()
+            if (uriStr.contains("albumart/")) {
+                val albumId = albumArtUri.lastPathSegment?.toLongOrNull() ?: 0L
+                if (albumId > 0) {
+                    val bytes = AlbumArtUtil.getArtworkBytes(
+                        context = context,
+                        songPath = "",
+                        songUri = "",
+                        albumId = albumId
+                    )
+                    if (bytes != null) {
+                        highResArtwork = bytes
+                        return@LaunchedEffect
+                    }
+                }
+            }
+        }
+    }
+
+    // Prioritize high-resolution source bytes over low-res legacy MediaStore thumbnail
+    val effectiveModel = highResArtwork
+        ?: (if (!song?.customArtworkUri.isNullOrEmpty()) Uri.parse(song!!.customArtworkUri) else null)
+        ?: albumArtUri
+        ?: song?.albumArtUri
 
     val boxModifier = modifier
         .then(if (size != null) Modifier.size(size) else Modifier)
@@ -65,10 +111,12 @@ fun AlbumArtContainer(
         if (effectiveModel != null) {
             ImageRequest.Builder(context)
                 .data(effectiveModel)
-                .crossfade(false)
+                .crossfade(true)
+                .bitmapConfig(android.graphics.Bitmap.Config.ARGB_8888)
+                .allowRgb565(false)
+                .allowHardware(true)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .diskCachePolicy(CachePolicy.ENABLED)
-                .allowHardware(true)
                 .apply {
                     if (size != null) {
                         val px = with(density) { size.roundToPx() }
@@ -77,6 +125,10 @@ fun AlbumArtContainer(
                             precision(Precision.EXACT)
                             scale(Scale.FILL)
                         }
+                    } else {
+                        // High-res hero art for Now Playing: render at full master quality
+                        precision(Precision.AUTOMATIC)
+                        scale(Scale.FIT)
                     }
                 }
                 .build()
