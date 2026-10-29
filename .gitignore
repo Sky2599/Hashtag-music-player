@@ -1,18 +1,46 @@
-*.iml
-.gradle
-.kotlin
-/local.properties
-/.idea/caches
-/.idea/libraries
-/.idea/modules.xml
-/.idea/workspace.xml
-/.idea/navEditor.xml
-/.idea/assetWizardSettings.xml
-.DS_Store
+# Built application files
+*.apk
+*.aar
+*.aab
+
+# Gradle files
+.gradle/
+build/
+*/build/
 /build
-/captures
-.externalNativeBuild
-.cxx
+
+# Local configuration file (sdk path, etc)
 local.properties
+/local.properties
+
+# Log files
+*.log
+
+# Android Studio Navigation editor temp files
+.idea/navEditor.xml
+.idea/assetWizardSettings.xml
+
+# Android Studio / IntelliJ IDEA
+*.iml
+.idea/
+.kotlin/
+
+# External native build folder
+.externalNativeBuild
+.cxx/
+
+# Google Services / Secrets
 .env
+
+# Keystore files (debug.keystore.base64 is tracked so CI can build debug APKs)
 debug.keystore
+*.jks
+*.keystore
+!debug.keystore.base64
+
+# Platform and temporary metadata
+.build-outputs/
+.aistudio/
+captures/
+.DS_Store
+Thumbs.db

@@ -26,7 +26,7 @@ data class Song(
     val albumArtUri: Uri? by lazy(LazyThreadSafetyMode.NONE) {
         if (!customArtworkUri.isNullOrEmpty()) {
             Uri.parse(customArtworkUri)
-        } else if (albumId > 0) {
+        } else if (albumId > 0 && !album.equals("Unknown Album", ignoreCase = true) && album.isNotBlank()) {
             Uri.parse("content://media/external/audio/albumart/$albumId")
         } else null
     }

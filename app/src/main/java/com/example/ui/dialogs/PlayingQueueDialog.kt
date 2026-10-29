@@ -161,6 +161,7 @@ fun PlayingQueueDialog(
 
                                 AlbumArtContainer(
                                     albumArtUri = song.albumArtUri,
+                                    song = song,
                                     size = 40.dp,
                                     cornerRadius = 8.dp
                                 )

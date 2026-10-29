@@ -111,17 +111,6 @@ fun AppSidebar(
     val theme = LocalAppTheme.current
     val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
 
-    val infiniteTransition = rememberInfiniteTransition(label = "sidebar_sheen")
-    val sheenProgress by infiniteTransition.animateFloat(
-        initialValue = -1.2f,
-        targetValue = 2.4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "sheen_sweep"
-    )
-
     ModalDrawerSheet(
         modifier = modifier
             .width(308.dp)
@@ -181,20 +170,15 @@ fun AppSidebar(
                     .drawWithContent {
                         drawContent()
                         if (isLiquidGlass) {
-                            val sweepX = size.width * sheenProgress
                             drawRect(
-                                brush = Brush.linearGradient(
+                                brush = Brush.verticalGradient(
                                     colors = listOf(
-                                        Color.Transparent,
-                                        Color(0x18FFFFFF),
-                                        Color(0x85FFFFFF),
-                                        Color(0x22FFFFFF),
+                                        Color(0x35FFFFFF),
                                         Color.Transparent
                                     ),
-                                    start = Offset(sweepX, 0f),
-                                    end = Offset(sweepX + size.width * 0.40f, size.height)
-                                ),
-                                blendMode = BlendMode.Screen
+                                    startY = 0f,
+                                    endY = size.height * 0.45f
+                                )
                             )
                         }
                     }
@@ -222,6 +206,7 @@ fun AppSidebar(
                             ) {
                                 AlbumArtContainer(
                                     albumArtUri = currentSong.albumArtUri,
+                                    song = currentSong,
                                     size = 46.dp,
                                     cornerRadius = 14.dp,
                                     contentDescription = "Now Playing Artwork"
@@ -395,9 +380,18 @@ fun AppSidebar(
                         },
                         modifier = Modifier
                             .padding(vertical = 2.dp)
+                            .then(
+                                if (isLiquidGlass) {
+                                    Modifier.border(
+                                        0.8.dp,
+                                        Color(0x20FFFFFF),
+                                        RoundedCornerShape(12.dp)
+                                    )
+                                } else Modifier
+                            )
                             .testTag(item.tag),
                         colors = NavigationDrawerItemDefaults.colors(
-                            unselectedContainerColor = Color.Transparent
+                            unselectedContainerColor = if (isLiquidGlass) Color(0x150E1E36) else Color.Transparent
                         ),
                         shape = RoundedCornerShape(12.dp)
                     )

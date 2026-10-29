@@ -48,15 +48,19 @@ class MusicRepository(
     }.flowOn(Dispatchers.Default)
 
     val albums: Flow<List<Album>> = allSongs.map { songs ->
-        songs.groupBy { it.album }
+        songs.groupBy { it.album.ifBlank { "Unknown Album" } }
             .map { (albumTitle, songList) ->
-                val first = songList.first()
+                val firstWithArt = songList.firstOrNull { !it.customArtworkUri.isNullOrEmpty() }
+                    ?: songList.firstOrNull { it.albumArtUri != null }
+                    ?: songList.first()
                 Album(
-                    id = first.albumId,
+                    id = firstWithArt.albumId,
                     title = albumTitle,
-                    artist = first.artist,
+                    artist = firstWithArt.artist,
                     songCount = songList.size,
-                    albumArtUri = first.albumArtUri?.toString()
+                    albumArtUri = firstWithArt.customArtworkUri ?: firstWithArt.albumArtUri?.toString(),
+                    firstSongPath = firstWithArt.path,
+                    firstSongUri = firstWithArt.uri
                 )
             }
             .sortedWith(compareBy(String.CASE_INSENSITIVE_ORDER) { it.title.trim() })

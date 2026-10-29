@@ -395,10 +395,11 @@ fun ArtistListItem(
                 modifier = Modifier.weight(1f)
             ) {
                 // Circular artist avatar with first album art or initial
-                val firstArt = songs.firstOrNull()?.albumArtUri
-                if (firstArt != null) {
+                val firstSong = songs.firstOrNull()
+                if (firstSong != null && (firstSong.albumArtUri != null || firstSong.path.isNotEmpty())) {
                     AlbumArtContainer(
-                        albumArtUri = firstArt,
+                        albumArtUri = firstSong.albumArtUri,
+                        song = firstSong,
                         size = 52.dp,
                         cornerRadius = 26.dp
                     )
@@ -462,7 +463,8 @@ fun SpotifyArtistDetailView(
     onAddToQueue: (Song) -> Unit,
     onToggleFavorite: ((Song) -> Unit)? = null
 ) {
-    val firstArtwork = data.allSongs.firstOrNull()?.albumArtUri
+    val firstSong = data.allSongs.firstOrNull()
+    val firstArtwork = firstSong?.albumArtUri
     val detailListState = rememberLazyListState()
     val configuration = androidx.compose.ui.platform.LocalConfiguration.current
     val isLandscape = configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
@@ -517,9 +519,10 @@ fun SpotifyArtistDetailView(
                         .padding(start = 16.dp, bottom = if (isLandscape) 8.dp else 16.dp, end = 16.dp)
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (firstArtwork != null) {
+                        if (firstSong != null && (firstArtwork != null || firstSong.path.isNotEmpty())) {
                             AlbumArtContainer(
                                 albumArtUri = firstArtwork,
+                                song = firstSong,
                                 size = avatarSize,
                                 cornerRadius = avatarSize / 2
                             )
@@ -772,6 +775,7 @@ fun ArtistSongRow(
 
         // Artwork thumbnail
         AlbumArtContainer(
+            song = song,
             albumArtUri = song.albumArtUri,
             size = 44.dp,
             cornerRadius = 6.dp
@@ -860,9 +864,11 @@ fun ReleaseCard(
         colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
     ) {
         Column(modifier = Modifier.padding(8.dp)) {
-            val artUri = if (release.artworkUri != null) Uri.parse(release.artworkUri) else null
+            val firstSong = release.songs.firstOrNull()
+            val artUri = if (release.artworkUri != null) Uri.parse(release.artworkUri) else firstSong?.albumArtUri
             AlbumArtContainer(
                 albumArtUri = artUri,
+                song = firstSong,
                 size = 124.dp,
                 cornerRadius = 8.dp
             )

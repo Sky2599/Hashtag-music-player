@@ -713,6 +713,8 @@ private fun AlbumGridCard(
             Box {
                 AlbumArtContainer(
                     albumArtUri = album.parsedArtUri,
+                    songPath = album.firstSongPath,
+                    songUri = album.firstSongUri,
                     modifier = Modifier
                         .fillMaxWidth()
                         .aspectRatio(1f),
@@ -857,6 +859,8 @@ private fun AlbumTracklistContent(
             Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.CenterVertically) {
                 AlbumArtContainer(
                     albumArtUri = if (album.albumArtUri != null) android.net.Uri.parse(album.albumArtUri) else null,
+                    songPath = album.firstSongPath,
+                    songUri = album.firstSongUri,
                     size = 46.dp,
                     cornerRadius = 8.dp
                 )

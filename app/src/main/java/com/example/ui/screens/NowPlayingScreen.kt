@@ -18,6 +18,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.draw.drawWithContent
@@ -896,6 +897,7 @@ fun NowPlayingScreen(
 
                                     AlbumArtContainer(
                                         albumArtUri = song.albumArtUri,
+                                        song = song,
                                         size = 36.dp,
                                         cornerRadius = 6.dp
                                     )
@@ -1118,6 +1120,7 @@ private fun NowPlayingLandscapeLayout(
                     )
                 } else {
                     AlbumArtContainer(
+                        song = currentSong,
                         albumArtUri = currentSong.albumArtUri,
                         modifier = Modifier.fillMaxSize(),
                         cornerRadius = 12.dp,
@@ -1892,15 +1895,12 @@ private fun ReflectivePlayPauseButton(
     val theme = LocalAppTheme.current
     val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
 
-    val infiniteTransition = rememberInfiniteTransition(label = "play_pause_sheen")
-    val sheenProgress by infiniteTransition.animateFloat(
-        initialValue = -0.6f,
-        targetValue = 1.8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2400, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "orb_sheen_sweep"
+    val interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+    val pressSheen by androidx.compose.animation.core.animateFloatAsState(
+        targetValue = if (isPressed) 1f else 0f,
+        animationSpec = androidx.compose.animation.core.tween(if (isPressed) 80 else 300),
+        label = "play_pause_press_sheen"
     )
 
     Box(
@@ -1940,24 +1940,39 @@ private fun ReflectivePlayPauseButton(
             )
             .drawWithContent {
                 drawContent()
-                // Orb specular reflection sweep
-                val sheenW = size.width * 0.6f
-                val sheenX = (sheenProgress * (size.width + sheenW)) - sheenW
-                drawCircle(
-                    brush = Brush.linearGradient(
-                        colors = listOf(
-                            Color.Transparent,
-                            Color(0x35FFFFFF),
-                            Color(0x60FFFFFF),
-                            Color.Transparent
-                        ),
-                        start = Offset(sheenX, 0f),
-                        end = Offset(sheenX + sheenW, size.height)
-                    ),
-                    blendMode = BlendMode.Screen
-                )
+                if (isLiquidGlass) {
+                    // Resting top specular light
+                    drawCircle(
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color(0x35FFFFFF),
+                                Color.Transparent
+                            ),
+                            startY = 0f,
+                            endY = size.height * 0.5f
+                        )
+                    )
+                    // Pressed specular burst
+                    if (pressSheen > 0.01f) {
+                        drawCircle(
+                            brush = Brush.radialGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.5f * pressSheen),
+                                    Color(0x8000F0FF).copy(alpha = 0.35f * pressSheen),
+                                    Color.Transparent
+                                ),
+                                center = Offset(size.width * 0.5f, size.height * 0.4f),
+                                radius = size.minDimension * 0.6f
+                            )
+                        )
+                    }
+                }
             }
-            .clickable(onClick = onClick)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            )
             .testTag(testTag),
         contentAlignment = Alignment.Center
     ) {
@@ -1970,22 +1985,18 @@ private fun ReflectivePlayPauseButton(
                 }
                 .drawWithContent {
                     drawContent()
-                    // Draw liquid glass specular sheen across the icon glyph
-                    val iconSheenW = size.width * 0.7f
-                    val iconSheenX = (sheenProgress * (size.width + iconSheenW)) - iconSheenW
-                    drawRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                if (isLiquidGlass) Color(0xCCFFFFFF) else Color(0x99FFFFFF),
-                                if (isLiquidGlass) Color(0xEE00F0FF) else Color(0x88FFFFFF),
-                                Color.Transparent
+                    if (isLiquidGlass && pressSheen > 0.01f) {
+                        drawRect(
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.6f * pressSheen),
+                                    Color(0xAA00F0FF).copy(alpha = 0.4f * pressSheen),
+                                    Color.Transparent
+                                )
                             ),
-                            start = Offset(iconSheenX, 0f),
-                            end = Offset(iconSheenX + iconSheenW, size.height)
-                        ),
-                        blendMode = BlendMode.SrcAtop
-                    )
+                            blendMode = BlendMode.SrcAtop
+                        )
+                    }
                 },
             contentAlignment = Alignment.Center
         ) {

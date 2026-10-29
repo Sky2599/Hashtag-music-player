@@ -813,6 +813,7 @@ fun PlaylistDetailDialog(
                             ) {
                                 AlbumArtContainer(
                                     albumArtUri = song.albumArtUri,
+                                    song = song,
                                     size = 40.dp,
                                     cornerRadius = 6.dp
                                 )

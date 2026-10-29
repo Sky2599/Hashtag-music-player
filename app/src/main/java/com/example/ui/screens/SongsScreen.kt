@@ -525,6 +525,7 @@ private fun SongInfoBottomSheetContent(
         ) {
             AlbumArtContainer(
                 albumArtUri = song.albumArtUri,
+                song = song,
                 size = 64.dp,
                 cornerRadius = 10.dp,
                 contentDescription = song.title
@@ -773,6 +774,7 @@ private fun SongItemRow(
             // Album thumbnail
             AlbumArtContainer(
                 albumArtUri = song.albumArtUri,
+                song = song,
                 size = 48.dp,
                 cornerRadius = SongThumbCornerDp,
                 contentDescription = song.title

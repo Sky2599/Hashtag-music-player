@@ -94,18 +94,7 @@ fun AppBottomBar(
     // Infinite transition for fluid specular reflections and ambient moving pill
     val infiniteTransition = rememberInfiniteTransition(label = "bottom_bar_fluid_anims")
 
-    // 1. Specular reflection sweep across the active tab pill
-    val sheenProgress by infiniteTransition.animateFloat(
-        initialValue = -0.8f,
-        targetValue = 2.0f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 2600, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "sheen_sweep"
-    )
-
-    // 2. Ambient floating pill smooth phase (GPU-accelerated lissajous motion for peak efficiency)
+    // 1. Ambient floating pill smooth phase (GPU-accelerated lissajous motion for peak efficiency)
     val floatPhase by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = (2 * Math.PI).toFloat(),
@@ -303,23 +292,18 @@ fun AppBottomBar(
                     )
                     .drawWithContent {
                         drawContent()
-
-                        // Specular Light Sheen Reflection Sweep
-                        val sweepX = size.width * sheenProgress
-                        drawRect(
-                            brush = Brush.linearGradient(
-                                colors = listOf(
-                                    Color.Transparent,
-                                    Color(0x20FFFFFF),
-                                    Color(0x90FFFFFF),
-                                    Color(0x25FFFFFF),
-                                    Color.Transparent
-                                ),
-                                start = Offset(sweepX, 0f),
-                                end = Offset(sweepX + size.width * 0.45f, size.height)
-                            ),
-                            blendMode = BlendMode.Screen
-                        )
+                        if (isLiquidGlass) {
+                            drawRect(
+                                brush = Brush.verticalGradient(
+                                    colors = listOf(
+                                        Color(0x35FFFFFF),
+                                        Color.Transparent
+                                    ),
+                                    startY = 0f,
+                                    endY = size.height * 0.45f
+                                )
+                            )
+                        }
                     }
             )
 

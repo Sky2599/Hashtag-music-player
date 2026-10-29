@@ -100,6 +100,9 @@ import com.example.ui.theme.TextPrimary
 import com.example.ui.theme.TextSecondary
 import com.example.ui.theme.TextTertiary
 import com.example.ui.util.TactileHaptics
+import com.example.ui.util.glassPressSheen
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.ui.platform.LocalView
 import kotlinx.coroutines.launch
 import kotlin.math.roundToInt
@@ -159,17 +162,7 @@ fun SettingsScreen(
     val theme = LocalAppTheme.current
     val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
 
-    val infiniteTransition = rememberInfiniteTransition(label = "settings_glass_anims")
-    val sheenProgress by infiniteTransition.animateFloat(
-        initialValue = -0.6f,
-        targetValue = 1.8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3000, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "tab_sheen_sweep"
-    )
-
+    val infiniteTransition = rememberInfiniteTransition(label = "settings_ambient_pill")
     val ambientPillPhase by infiniteTransition.animateFloat(
         initialValue = 0f,
         targetValue = (2 * Math.PI).toFloat(),
@@ -183,7 +176,7 @@ fun SettingsScreen(
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(if (isLiquidGlass) Color.Transparent else DeepPurple)
+            .background(if (isLiquidGlass) Color(0xEB0A1324) else DeepPurple)
             .statusBarsPadding()
             .navigationBarsPadding()
             .testTag("settings_screen")
@@ -364,21 +357,18 @@ fun SettingsScreen(
                         )
                         .drawWithContent {
                             drawContent()
-                            val sheenW = size.width * 0.7f
-                            val sheenX = (sheenProgress * (size.width + sheenW)) - sheenW
-                            drawRect(
-                                brush = Brush.linearGradient(
-                                    colors = listOf(
-                                        Color.Transparent,
-                                        Color(0x30FFFFFF),
-                                        Color(0x50FFFFFF),
-                                        Color.Transparent
-                                    ),
-                                    start = Offset(sheenX, 0f),
-                                    end = Offset(sheenX + sheenW, size.height)
-                                ),
-                                blendMode = BlendMode.Screen
-                            )
+                            if (isLiquidGlass) {
+                                drawRect(
+                                    brush = Brush.verticalGradient(
+                                        listOf(
+                                            Color(0x35FFFFFF),
+                                            Color.Transparent
+                                        ),
+                                        startY = 0f,
+                                        endY = size.height * 0.45f
+                                    )
+                                )
+                            }
                         }
                 )
 
@@ -389,11 +379,19 @@ fun SettingsScreen(
                 ) {
                     tabs.forEachIndexed { index, tab ->
                         val isSelected = pagerState.currentPage == index
+                        val tabInteractionSource = remember { MutableInteractionSource() }
+                        val isTabPressed by tabInteractionSource.collectIsPressedAsState()
+
                         Box(
                             modifier = Modifier
                                 .weight(1f)
                                 .fillMaxHeight()
-                                .clickable {
+                                .clip(RoundedCornerShape(16.dp))
+                                .glassPressSheen(isLiquidGlass = isLiquidGlass, isPressed = isTabPressed)
+                                .clickable(
+                                    interactionSource = tabInteractionSource,
+                                    indication = null
+                                ) {
                                     TactileHaptics.selectionClick(view)
                                     coroutineScope.launch {
                                         pagerState.animateScrollToPage(index)
@@ -488,6 +486,9 @@ fun SettingsScreen(
 
                                         themeOptions.forEach { (engineKey, title, description) ->
                                             val isSelected = settings.themeEngine == engineKey
+                                            val cardInteractionSource = remember { MutableInteractionSource() }
+                                            val isCardPressed by cardInteractionSource.collectIsPressedAsState()
+
                                             Card(
                                                 shape = RoundedCornerShape(14.dp),
                                                 colors = CardDefaults.cardColors(
@@ -512,7 +513,11 @@ fun SettingsScreen(
                                                         },
                                                         shape = RoundedCornerShape(14.dp)
                                                     )
-                                                    .clickable {
+                                                    .glassPressSheen(isLiquidGlass = isLiquidGlass, isPressed = isCardPressed)
+                                                    .clickable(
+                                                        interactionSource = cardInteractionSource,
+                                                        indication = null
+                                                    ) {
                                                         onSettingsChanged(
                                                             settings.copy(
                                                                 themeEngine = engineKey,
@@ -928,17 +933,6 @@ private fun SettingsSectionCard(
     val theme = LocalAppTheme.current
     val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
 
-    val infiniteTransition = rememberInfiniteTransition(label = "section_glass_anim")
-    val sheenProgress by infiniteTransition.animateFloat(
-        initialValue = -0.6f,
-        targetValue = 1.8f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 3500, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "section_sheen_sweep"
-    )
-
     Card(
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(
@@ -970,21 +964,15 @@ private fun SettingsSectionCard(
             .drawWithContent {
                 drawContent()
                 if (isLiquidGlass) {
-                    val sheenWidth = size.width * 0.5f
-                    val sheenX = (sheenProgress * (size.width + sheenWidth)) - sheenWidth
                     drawRect(
-                        brush = Brush.linearGradient(
-                            colors = listOf(
-                                Color.Transparent,
-                                Color(0x12FFFFFF),
-                                Color(0x2200F0FF),
-                                Color(0x15FFFFFF),
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color(0x18FFFFFF),
                                 Color.Transparent
                             ),
-                            start = Offset(sheenX, 0f),
-                            end = Offset(sheenX + sheenWidth, size.height)
-                        ),
-                        blendMode = BlendMode.Screen
+                            startY = 0f,
+                            endY = size.height * 0.35f
+                        )
                     )
                 }
             }

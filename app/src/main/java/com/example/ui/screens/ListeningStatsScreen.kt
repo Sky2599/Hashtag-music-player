@@ -16,6 +16,18 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import com.example.ui.theme.LocalAppTheme
+import com.example.ui.util.LiquidGlassSheen
+import com.example.ui.util.glassPressSheen
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -183,10 +195,13 @@ fun ListeningStatsScreen(
         }
     }
 
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+
     BoxWithConstraints(
         modifier = modifier
             .fillMaxSize()
-            .background(DeepPurple)
+            .background(if (isLiquidGlass) Color(0xEB0A1324) else DeepPurple)
             .statusBarsPadding()
             .navigationBarsPadding()
             .testTag("listening_stats_screen")
@@ -201,7 +216,16 @@ fun ListeningStatsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(DeepPurpleSurface)
+                    .background(if (isLiquidGlass) Color(0x220D1B2D) else DeepPurpleSurface)
+                    .then(
+                        if (isLiquidGlass) {
+                            Modifier.border(
+                                1.dp,
+                                Brush.verticalGradient(listOf(Color(0x35FFFFFF), Color.Transparent)),
+                                androidx.compose.ui.graphics.RectangleShape
+                            )
+                        } else Modifier
+                    )
                     .padding(horizontal = 12.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -281,7 +305,7 @@ fun ListeningStatsScreen(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .background(DeepPurpleDark)
+                    .background(if (isLiquidGlass) Color(0x180D1B2D) else DeepPurpleDark)
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -296,12 +320,33 @@ fun ListeningStatsScreen(
                         modifier = Modifier
                             .weight(1f)
                             .clip(RoundedCornerShape(12.dp))
-                            .background(if (isSelected) ElectricViolet else DeepPurpleSurface)
-                            .then(
+                            .background(
                                 if (isSelected) {
-                                    Modifier.border(1.dp, ElectricVioletLight, RoundedCornerShape(12.dp))
-                                } else Modifier
+                                    if (isLiquidGlass) Color(0x3500F0FF) else ElectricViolet
+                                } else {
+                                    if (isLiquidGlass) Color(0x15FFFFFF) else DeepPurpleSurface
+                                }
                             )
+                            .border(
+                                width = 1.dp,
+                                brush = if (isSelected) {
+                                    if (isLiquidGlass) {
+                                        Brush.linearGradient(
+                                            listOf(Color(0xE0FFFFFF), Color(0x8000F0FF), Color(0xC0FFFFFF))
+                                        )
+                                    } else {
+                                        Brush.linearGradient(listOf(ElectricVioletLight, ElectricVioletLight))
+                                    }
+                                } else {
+                                    if (isLiquidGlass) {
+                                        Brush.linearGradient(listOf(Color(0x25FFFFFF), Color(0x10FFFFFF)))
+                                    } else {
+                                        Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                    }
+                                },
+                                shape = RoundedCornerShape(12.dp)
+                            )
+                            .glassPressSheen(isLiquidGlass = isLiquidGlass, isPressed = isSelected)
                             .instantTapDown(hapticLightImpact = false) {
                                 selectedSectionTab = idx
                             }
@@ -311,7 +356,7 @@ fun ListeningStatsScreen(
                     ) {
                         Text(
                             text = title,
-                            color = if (isSelected) OnPrimaryAccent else TextSecondary,
+                            color = if (isSelected) (if (isLiquidGlass) Color.White else OnPrimaryAccent) else TextSecondary,
                             fontSize = 11.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                             maxLines = 1,
@@ -524,25 +569,88 @@ fun ListeningStatsScreen(
 }
 
 @Composable
-private fun SonicDnaHeroCard(analytics: DetailedListeningAnalytics) {
+private fun ReflectiveStatsCard(
+    modifier: Modifier = Modifier,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp),
+    containerColor: Color? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+
+    val actualBg = containerColor ?: if (isLiquidGlass) Color(0x220D1B2D) else DeepPurpleCard
+
     Card(
+        modifier = modifier
+            .border(
+                width = 1.dp,
+                brush = if (isLiquidGlass) {
+                    LiquidGlassSheen.GlassBorderGradient
+                } else {
+                    Brush.linearGradient(
+                        colors = listOf(
+                            theme.primaryLight.copy(alpha = 0.45f),
+                            Color(0x18FFFFFF),
+                            theme.primary.copy(alpha = 0.25f)
+                        )
+                    )
+                },
+                shape = shape
+            )
+            .drawWithContent {
+                drawContent()
+                if (isLiquidGlass) {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color(0x18FFFFFF),
+                                Color.Transparent
+                            ),
+                            startY = 0f,
+                            endY = size.height * 0.35f
+                        )
+                    )
+                }
+            },
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = actualBg),
+        content = content
+    )
+}
+
+@Composable
+private fun SonicDnaHeroCard(analytics: DetailedListeningAnalytics) {
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+
+    ReflectiveStatsCard(
         modifier = Modifier
             .fillMaxWidth()
             .testTag("sonic_dna_hero_card"),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+        containerColor = if (isLiquidGlass) Color(0x220D1B2D) else DeepPurpleCard
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(
-                    Brush.linearGradient(
-                        colors = listOf(
-                            ElectricViolet.copy(alpha = 0.28f),
-                            DeepPurpleCard,
-                            DeepPurpleSurface
+                    if (isLiquidGlass) {
+                        Brush.linearGradient(
+                            colors = listOf(
+                                Color(0x2400F0FF),
+                                Color(0x120D1B2D),
+                                Color(0x200D1B2D)
+                            )
                         )
-                    )
+                    } else {
+                        Brush.linearGradient(
+                            colors = listOf(
+                                ElectricViolet.copy(alpha = 0.28f),
+                                DeepPurpleCard,
+                                DeepPurpleSurface
+                            )
+                        )
+                    }
                 )
                 .padding(18.dp)
         ) {
@@ -586,9 +694,13 @@ private fun SonicDnaHeroCard(analytics: DetailedListeningAnalytics) {
 
                 // Audiophile Fidelity Badge
                 Surface(
-                    color = DeepPurpleDark,
+                    color = if (isLiquidGlass) Color(0x250D1B2D) else DeepPurpleDark,
                     shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.border(1.dp, ElectricVioletLight.copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                    modifier = Modifier.border(
+                        1.dp,
+                        if (isLiquidGlass) Color(0x5000F0FF) else ElectricVioletLight.copy(alpha = 0.45f),
+                        RoundedCornerShape(12.dp)
+                    )
                 ) {
                     Column(
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -726,10 +838,12 @@ private fun StatKpiTile(
     subvalue: String,
     modifier: Modifier = Modifier
 ) {
-    Card(
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+    ReflectiveStatsCard(
         modifier = modifier,
         shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = DeepPurpleSurface)
+        containerColor = if (isLiquidGlass) Color(0x1F0D1B2D) else DeepPurpleSurface
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -777,10 +891,12 @@ private fun DistributionSectionCard(
     icon: ImageVector,
     buckets: List<StatDistributionBucket>
 ) {
-    Card(
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+    ReflectiveStatsCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+        containerColor = if (isLiquidGlass) Color(0x220D1B2D) else DeepPurpleCard
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -890,10 +1006,12 @@ private fun TopArtistsLeaderboardCard(
     onPlayArtist: (ArtistListeningStat) -> Unit,
     onSeeAllClick: (() -> Unit)?
 ) {
-    Card(
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+    ReflectiveStatsCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+        containerColor = if (isLiquidGlass) Color(0x220D1B2D) else DeepPurpleCard
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -949,7 +1067,16 @@ private fun TopArtistsLeaderboardCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(DeepPurpleSurface)
+                            .background(if (isLiquidGlass) Color(0x1C0D1B2D) else DeepPurpleSurface)
+                            .border(
+                                width = 1.dp,
+                                brush = if (isLiquidGlass) {
+                                    Brush.linearGradient(listOf(Color(0x40FFFFFF), Color(0x1500F0FF), Color(0x25FFFFFF)))
+                                } else {
+                                    Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                },
+                                shape = RoundedCornerShape(12.dp)
+                            )
                             .instantListClickable { onPlayArtist(artist) }
                             .padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -962,8 +1089,10 @@ private fun TopArtistsLeaderboardCard(
                             modifier = Modifier.width(28.dp)
                         )
 
+                        val artistSong = artist.songs.firstOrNull()
                         AlbumArtContainer(
                             albumArtUri = artist.artworkUri,
+                            song = artistSong,
                             size = 44.dp,
                             cornerRadius = 22.dp,
                             contentDescription = artist.name
@@ -1034,10 +1163,12 @@ private fun TopAlbumsLeaderboardCard(
     albums: List<AlbumListeningStat>,
     onPlayAlbum: (AlbumListeningStat) -> Unit
 ) {
-    Card(
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+    ReflectiveStatsCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+        containerColor = if (isLiquidGlass) Color(0x220D1B2D) else DeepPurpleCard
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -1071,7 +1202,16 @@ private fun TopAlbumsLeaderboardCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(12.dp))
-                            .background(DeepPurpleSurface)
+                            .background(if (isLiquidGlass) Color(0x1C0D1B2D) else DeepPurpleSurface)
+                            .border(
+                                width = 1.dp,
+                                brush = if (isLiquidGlass) {
+                                    Brush.linearGradient(listOf(Color(0x40FFFFFF), Color(0x1500F0FF), Color(0x25FFFFFF)))
+                                } else {
+                                    Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                },
+                                shape = RoundedCornerShape(12.dp)
+                            )
                             .instantListClickable { onPlayAlbum(album) }
                             .padding(10.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -1084,8 +1224,10 @@ private fun TopAlbumsLeaderboardCard(
                             modifier = Modifier.width(28.dp)
                         )
 
+                        val albumSong = album.songs.firstOrNull()
                         AlbumArtContainer(
                             albumArtUri = album.artworkUri,
+                            song = albumSong,
                             size = 44.dp,
                             cornerRadius = 8.dp,
                             contentDescription = album.title
@@ -1138,13 +1280,15 @@ private fun TopTrackRankRow(
     onClick: () -> Unit
 ) {
     val fraction = (song.playCount.toFloat() / maxPlays.toFloat()).coerceIn(0.05f, 1f)
-    Card(
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+    ReflectiveStatsCard(
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
             .instantListClickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = DeepPurpleSurface)
+        containerColor = if (isLiquidGlass) Color(0x1E0D1B2D) else DeepPurpleSurface
     ) {
         Row(
             modifier = Modifier
@@ -1162,6 +1306,7 @@ private fun TopTrackRankRow(
 
             AlbumArtContainer(
                 albumArtUri = song.albumArtUri,
+                song = song,
                 size = 44.dp,
                 cornerRadius = 8.dp,
                 contentDescription = song.title
@@ -1222,10 +1367,12 @@ private fun RediscoverGemsCard(
     onSongClick: (Song, List<Song>) -> Unit
 ) {
     val view = LocalView.current
-    Card(
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+    ReflectiveStatsCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+        containerColor = if (isLiquidGlass) Color(0x220D1B2D) else DeepPurpleCard
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -1269,13 +1416,23 @@ private fun RediscoverGemsCard(
                         modifier = Modifier
                             .fillMaxWidth()
                             .clip(RoundedCornerShape(10.dp))
-                            .background(DeepPurpleSurface)
+                            .background(if (isLiquidGlass) Color(0x1C0D1B2D) else DeepPurpleSurface)
+                            .border(
+                                width = 1.dp,
+                                brush = if (isLiquidGlass) {
+                                    Brush.linearGradient(listOf(Color(0x40FFFFFF), Color(0x1500F0FF), Color(0x25FFFFFF)))
+                                } else {
+                                    Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                },
+                                shape = RoundedCornerShape(10.dp)
+                            )
                             .instantListClickable { onSongClick(song, gems) }
                             .padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         AlbumArtContainer(
                             albumArtUri = song.albumArtUri,
+                            song = song,
                             size = 38.dp,
                             cornerRadius = 6.dp,
                             contentDescription = song.title
@@ -1313,14 +1470,16 @@ private fun RediscoverGemsCard(
 
 @Composable
 private fun AudiophileFidelityMeterCard(analytics: DetailedListeningAnalytics) {
-    val accentPrimary = ElectricViolet
-    val accentLight = ElectricVioletLight
-    val darkTrack = DeepPurpleDark
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+    val accentPrimary = if (isLiquidGlass) Color(0xFF00F0FF) else ElectricViolet
+    val accentLight = if (isLiquidGlass) Color(0xFF70FFFF) else ElectricVioletLight
+    val darkTrack = if (isLiquidGlass) Color(0x300D1B2D) else DeepPurpleDark
 
-    Card(
+    ReflectiveStatsCard(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+        containerColor = if (isLiquidGlass) Color(0x220D1B2D) else DeepPurpleCard
     ) {
         Row(
             modifier = Modifier

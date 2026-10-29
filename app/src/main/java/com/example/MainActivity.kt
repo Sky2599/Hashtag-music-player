@@ -462,142 +462,151 @@ fun MusicApp(viewModel: MusicViewModel) {
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             ShiftingAmbientBackground {
-                val configuration = LocalConfiguration.current
-            val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-            val isTablet = maxWidth >= 720.dp
-            val useSideRail = isTablet || isLandscape
+                when {
+                    showSettingsDialog -> {
+                        SettingsScreen(
+                            settings = appSettings,
+                            isScanning = isScanning,
+                            songsCount = allSongs.size,
+                            albumsCount = albums.size,
+                            audioDeviceSpecs = audioDeviceSpecs,
+                            currentSong = currentSong,
+                            isBitPerfect = audioDeviceSpecs.isBitPerfectDirect,
+                            onSettingsChanged = { viewModel.updateSettings(it) },
+                            onManualRescan = { viewModel.triggerRescan() },
+                            onOpenEqualizer = {
+                                viewModel.setSettingsDialogVisible(false)
+                                viewModel.setEqualizerDialogVisible(true)
+                            },
+                            onOpenFolders = {
+                                viewModel.setSettingsDialogVisible(false)
+                                viewModel.setFoldersDialogVisible(true)
+                            },
+                            onResetPlaybackSpeedAndPitch = {
+                                viewModel.setPlaybackSpeed(1.0f)
+                                viewModel.setPlaybackPitch(0.0f)
+                            },
+                            onBackClick = { viewModel.setSettingsDialogVisible(false) }
+                        )
+                    }
+                    showStatsDialog -> {
+                        ListeningStatsScreen(
+                            allSongs = allSongs,
+                            onSongClick = { song, queueList ->
+                                viewModel.playSong(song, queueList)
+                            },
+                            onBackClick = { viewModel.setStatsDialogVisible(false) }
+                        )
+                    }
+                    else -> {
+                        val configuration = LocalConfiguration.current
+                        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                        val isTablet = maxWidth >= 720.dp
+                        val useSideRail = isTablet || isLandscape
 
-            if (useSideRail) {
-                // Adaptive Landscape / Tablet Layout: Scrollable Side Navigation Rail + Main Content + Docked MiniPlayer
-                Row(modifier = Modifier.fillMaxSize()) {
-                    AppNavigationRail(
-                        currentTab = currentTab,
-                        onTabSelected = { tab -> viewModel.selectTab(tab) },
-                        onMenuClick = {
-                            coroutineScope.launch { drawerState.open() }
-                        },
-                        onSettingsClick = {
-                            viewModel.setSettingsDialogVisible(true)
-                        }
-                    )
-
-                    Scaffold(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        containerColor = Color.Transparent,
-                        contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                        topBar = {
-                            if (currentTab != 2) {
-                                AppTopBar(
-                                    title = titles.getOrElse(currentTab) { "LIBRARY" },
+                        if (useSideRail) {
+                            // Adaptive Landscape / Tablet Layout: Scrollable Side Navigation Rail + Main Content + Docked MiniPlayer
+                            Row(modifier = Modifier.fillMaxSize()) {
+                                AppNavigationRail(
+                                    currentTab = currentTab,
+                                    onTabSelected = { tab -> viewModel.selectTab(tab) },
                                     onMenuClick = {
                                         coroutineScope.launch { drawerState.open() }
                                     },
-                                    isScanning = isScanning,
-                                    showSearch = currentTab == 4
+                                    onSettingsClick = {
+                                        viewModel.setSettingsDialogVisible(true)
+                                    }
                                 )
-                            }
-                        },
-                        bottomBar = {
-                            if (currentSong != null && currentTab != 2) {
-                                MiniPlayer(
-                                    currentSong = currentSong,
-                                    isPlaying = isPlaying,
-                                    onPlayPauseClick = { viewModel.togglePlayPause() },
-                                    onMiniPlayerClick = { viewModel.selectTab(2) }
-                                )
-                            }
-                        }
-                    ) { innerPadding ->
-                        Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Transparent)
-                                .padding(innerPadding)
-                        ) {
-                            activeTabContent()
-                        }
-                    }
-                }
-            } else {
-                // Mobile Handheld Layout: Top Bar + Content + Bottom Bar with docked MiniPlayer
-                Scaffold(
-                    modifier = Modifier.fillMaxSize(),
-                    containerColor = Color.Transparent,
-                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
-                    topBar = {
-                        if (currentTab != 2) {
-                            AppTopBar(
-                                title = titles.getOrElse(currentTab) { "LIBRARY" },
-                                onMenuClick = {
-                                    coroutineScope.launch { drawerState.open() }
-                                },
-                                isScanning = isScanning,
-                                showSearch = currentTab == 4
-                            )
-                        }
-                    },
-                    bottomBar = {
-                        val configuration = LocalConfiguration.current
-                        val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
-                        if (!isLandscape) {
-                            Column(modifier = Modifier.background(Color.Transparent)) {
-                                if (currentSong != null && currentTab != 2) {
-                                    MiniPlayer(
-                                        currentSong = currentSong,
-                                        isPlaying = isPlaying,
-                                        onPlayPauseClick = { viewModel.togglePlayPause() },
-                                        onMiniPlayerClick = { viewModel.selectTab(2) }
-                                    )
-                                }
-                                AppBottomBar(
-                                    currentTab = currentTab,
-                                    onTabSelected = { tab -> viewModel.selectTab(tab) }
-                                )
-                            }
-                        }
-                    }
-                ) { innerPadding ->
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(Color.Transparent)
-                            .padding(innerPadding)
-                    ) {
-                        activeTabContent()
-                    }
-                }
-            }
-        }
-    }
 
-                // Full-Screen Tabbed Settings Page
-                if (showSettingsDialog) {
-                    SettingsScreen(
-                        settings = appSettings,
-                        isScanning = isScanning,
-                        songsCount = allSongs.size,
-                        albumsCount = albums.size,
-                        audioDeviceSpecs = audioDeviceSpecs,
-                        currentSong = currentSong,
-                        isBitPerfect = audioDeviceSpecs.isBitPerfectDirect,
-                        onSettingsChanged = { viewModel.updateSettings(it) },
-                        onManualRescan = { viewModel.triggerRescan() },
-                        onOpenEqualizer = {
-                            viewModel.setSettingsDialogVisible(false)
-                            viewModel.setEqualizerDialogVisible(true)
-                        },
-                        onOpenFolders = {
-                            viewModel.setSettingsDialogVisible(false)
-                            viewModel.setFoldersDialogVisible(true)
-                        },
-                        onResetPlaybackSpeedAndPitch = {
-                            viewModel.setPlaybackSpeed(1.0f)
-                            viewModel.setPlaybackPitch(0.0f)
-                        },
-                        onBackClick = { viewModel.setSettingsDialogVisible(false) }
-                    )
+                                Scaffold(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight(),
+                                    containerColor = Color.Transparent,
+                                    contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                                    topBar = {
+                                        if (currentTab != 2) {
+                                            AppTopBar(
+                                                title = titles.getOrElse(currentTab) { "LIBRARY" },
+                                                onMenuClick = {
+                                                    coroutineScope.launch { drawerState.open() }
+                                                },
+                                                isScanning = isScanning,
+                                                showSearch = currentTab == 4
+                                            )
+                                        }
+                                    },
+                                    bottomBar = {
+                                        if (currentSong != null && currentTab != 2) {
+                                            MiniPlayer(
+                                                currentSong = currentSong,
+                                                isPlaying = isPlaying,
+                                                onPlayPauseClick = { viewModel.togglePlayPause() },
+                                                onMiniPlayerClick = { viewModel.selectTab(2) }
+                                            )
+                                        }
+                                    }
+                                ) { innerPadding ->
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxSize()
+                                            .background(Color.Transparent)
+                                            .padding(innerPadding)
+                                    ) {
+                                        activeTabContent()
+                                    }
+                                }
+                            }
+                        } else {
+                            // Mobile Handheld Layout: Top Bar + Content + Bottom Bar with docked MiniPlayer
+                            Scaffold(
+                                modifier = Modifier.fillMaxSize(),
+                                containerColor = Color.Transparent,
+                                contentWindowInsets = WindowInsets(0, 0, 0, 0),
+                                topBar = {
+                                    if (currentTab != 2) {
+                                        AppTopBar(
+                                            title = titles.getOrElse(currentTab) { "LIBRARY" },
+                                            onMenuClick = {
+                                                coroutineScope.launch { drawerState.open() }
+                                            },
+                                            isScanning = isScanning,
+                                            showSearch = currentTab == 4
+                                        )
+                                    }
+                                },
+                                bottomBar = {
+                                    val configuration = LocalConfiguration.current
+                                    val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+                                    if (!isLandscape) {
+                                        Column(modifier = Modifier.background(Color.Transparent)) {
+                                            if (currentSong != null && currentTab != 2) {
+                                                MiniPlayer(
+                                                    currentSong = currentSong,
+                                                    isPlaying = isPlaying,
+                                                    onPlayPauseClick = { viewModel.togglePlayPause() },
+                                                    onMiniPlayerClick = { viewModel.selectTab(2) }
+                                                )
+                                            }
+                                            AppBottomBar(
+                                                currentTab = currentTab,
+                                                onTabSelected = { tab -> viewModel.selectTab(tab) }
+                                            )
+                                        }
+                                    }
+                                }
+                            ) { innerPadding ->
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.Transparent)
+                                        .padding(innerPadding)
+                                ) {
+                                    activeTabContent()
+                                }
+                            }
+                        }
+                    }
                 }
 
                 // Folders Dialog
@@ -616,17 +625,6 @@ fun MusicApp(viewModel: MusicViewModel) {
                         queueIndex = queueIndex,
                         onSongClick = { viewModel.playSong(it) },
                         onDismiss = { viewModel.setQueueSheetVisible(false) }
-                    )
-                }
-
-                // Standalone Full-Screen Listening Statistics & Sonic DNA Page
-                if (showStatsDialog) {
-                    ListeningStatsScreen(
-                        allSongs = allSongs,
-                        onSongClick = { song, queueList ->
-                            viewModel.playSong(song, queueList)
-                        },
-                        onBackClick = { viewModel.setStatsDialogVisible(false) }
                     )
                 }
 
@@ -765,3 +763,5 @@ fun MusicApp(viewModel: MusicViewModel) {
             }
         }
     }
+}
+}

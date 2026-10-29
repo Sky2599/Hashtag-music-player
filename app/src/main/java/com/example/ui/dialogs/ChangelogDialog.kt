@@ -39,6 +39,16 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.SolidColor
+import com.example.ui.theme.LocalAppTheme
+import com.example.ui.util.LiquidGlassSheen
+import com.example.ui.util.glassPressSheen
 import com.example.ui.theme.DeepPurpleCard
 import com.example.ui.theme.DeepPurpleDark
 import com.example.ui.theme.DeepPurpleSurface
@@ -330,6 +340,9 @@ fun ChangelogDialog(
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
@@ -338,8 +351,13 @@ fun ChangelogDialog(
             modifier = modifier
                 .fillMaxWidth(0.94f)
                 .heightIn(max = 680.dp)
-                .clip(RoundedCornerShape(22.dp)),
-            color = DeepPurpleSurface,
+                .clip(RoundedCornerShape(24.dp))
+                .border(
+                    width = 1.2.dp,
+                    brush = if (isLiquidGlass) LiquidGlassSheen.GlassBorderGradient else SolidColor(DeepPurpleCard),
+                    shape = RoundedCornerShape(24.dp)
+                ),
+            color = if (isLiquidGlass) Color(0xEB0A1324) else DeepPurpleSurface,
             tonalElevation = 6.dp
         ) {
             Column(
@@ -356,15 +374,34 @@ fun ChangelogDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Box(
                             modifier = Modifier
-                                .size(40.dp)
-                                .clip(RoundedCornerShape(10.dp))
-                                .background(ElectricViolet.copy(alpha = 0.2f)),
+                                .size(42.dp)
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(
+                                    if (isLiquidGlass) {
+                                        Brush.linearGradient(
+                                            listOf(Color(0x4000F0FF), Color(0x2038BDF8))
+                                        )
+                                    } else {
+                                        SolidColor(ElectricViolet.copy(alpha = 0.2f))
+                                    }
+                                )
+                                .border(
+                                    1.dp,
+                                    if (isLiquidGlass) {
+                                        Brush.horizontalGradient(
+                                            listOf(Color(0x80FFFFFF), Color(0x6000F0FF))
+                                        )
+                                    } else {
+                                        SolidColor(Color.Transparent)
+                                    },
+                                    RoundedCornerShape(12.dp)
+                                ),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 imageVector = Icons.Default.NewReleases,
                                 contentDescription = null,
-                                tint = ElectricViolet,
+                                tint = if (isLiquidGlass) Color(0xFF00F0FF) else ElectricViolet,
                                 modifier = Modifier.size(24.dp)
                             )
                         }
@@ -374,13 +411,13 @@ fun ChangelogDialog(
                         Column {
                             Text(
                                 text = "Changelog & Updates",
-                                color = TextPrimary,
+                                color = if (isLiquidGlass) Color.White else TextPrimary,
                                 fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
                                 text = "Version release history and features",
-                                color = TextSecondary,
+                                color = if (isLiquidGlass) Color(0xFFB0C5DB) else TextSecondary,
                                 fontSize = 12.sp
                             )
                         }
@@ -388,18 +425,33 @@ fun ChangelogDialog(
 
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.testTag("close_changelog_dialog")
+                        modifier = Modifier
+                            .size(36.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isLiquidGlass) Color(0x20FFFFFF) else Color.Transparent
+                            )
+                            .border(
+                                1.dp,
+                                if (isLiquidGlass) Color(0x40FFFFFF) else Color.Transparent,
+                                CircleShape
+                            )
+                            .testTag("close_changelog_dialog")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Close,
                             contentDescription = "Close changelog",
-                            tint = TextSecondary
+                            tint = if (isLiquidGlass) Color.White else TextSecondary,
+                            modifier = Modifier.size(18.dp)
                         )
                     }
                 }
 
                 Spacer(modifier = Modifier.height(14.dp))
-                HorizontalDivider(color = DeepPurpleDark, thickness = 1.dp)
+                HorizontalDivider(
+                    color = if (isLiquidGlass) Color(0x2500F0FF) else DeepPurpleDark,
+                    thickness = 1.dp
+                )
                 Spacer(modifier = Modifier.height(12.dp))
 
                 // Scrollable version cards
@@ -410,7 +462,7 @@ fun ChangelogDialog(
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     items(AppChangelogHistory) { release ->
-                        VersionReleaseCard(release = release)
+                        VersionReleaseCard(release = release, isLiquidGlass = isLiquidGlass)
                     }
                 }
 
@@ -419,7 +471,7 @@ fun ChangelogDialog(
                 // Footer
                 Text(
                     text = "Hashtag Music Player • Material You & 32-bit DSP Edition",
-                    color = TextTertiary,
+                    color = if (isLiquidGlass) Color(0x80B0C5DB) else TextTertiary,
                     fontSize = 11.sp,
                     modifier = Modifier.align(Alignment.CenterHorizontally)
                 )
@@ -429,12 +481,30 @@ fun ChangelogDialog(
 }
 
 @Composable
-private fun VersionReleaseCard(release: ReleaseVersion) {
+private fun VersionReleaseCard(
+    release: ReleaseVersion,
+    isLiquidGlass: Boolean = false
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+    val isPressed by interactionSource.collectIsPressedAsState()
+
     Card(
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = DeepPurpleCard),
+        colors = CardDefaults.cardColors(
+            containerColor = if (isLiquidGlass) Color(0x220D1B2D) else DeepPurpleCard
+        ),
         modifier = Modifier
             .fillMaxWidth()
+            .border(
+                width = 1.dp,
+                brush = if (isLiquidGlass) LiquidGlassSheen.SubtleGlassBorder else SolidColor(Color.Transparent),
+                shape = RoundedCornerShape(16.dp)
+            )
+            .glassPressSheen(isLiquidGlass = isLiquidGlass, isPressed = isPressed)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null
+            ) { /* Tactile tap response */ }
             .testTag("changelog_card_${release.version}")
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
@@ -457,20 +527,33 @@ private fun VersionReleaseCard(release: ReleaseVersion) {
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(ElectricViolet.copy(alpha = 0.25f))
+                                .background(
+                                    if (isLiquidGlass) {
+                                        Brush.horizontalGradient(
+                                            listOf(Color(0x4500F0FF), Color(0x3038BDF8))
+                                        )
+                                    } else {
+                                        SolidColor(ElectricViolet.copy(alpha = 0.25f))
+                                    }
+                                )
+                                .border(
+                                    0.8.dp,
+                                    if (isLiquidGlass) Color(0x8000F0FF) else Color.Transparent,
+                                    RoundedCornerShape(6.dp)
+                                )
                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                         ) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 Icon(
                                     imageVector = Icons.Default.Verified,
                                     contentDescription = null,
-                                    tint = ElectricViolet,
+                                    tint = if (isLiquidGlass) Color(0xFF00F0FF) else ElectricViolet,
                                     modifier = Modifier.size(12.dp)
                                 )
                                 Spacer(modifier = Modifier.width(3.dp))
                                 Text(
                                     text = "LATEST",
-                                    color = ElectricVioletLight,
+                                    color = if (isLiquidGlass) Color(0xFFE0FFFF) else ElectricVioletLight,
                                     fontSize = 9.sp,
                                     fontWeight = FontWeight.Bold
                                 )
@@ -491,7 +574,7 @@ private fun VersionReleaseCard(release: ReleaseVersion) {
 
             Text(
                 text = release.headline,
-                color = ElectricVioletLight,
+                color = if (isLiquidGlass) Color(0xFF00F0FF) else ElectricVioletLight,
                 fontSize = 13.sp,
                 fontWeight = FontWeight.SemiBold
             )

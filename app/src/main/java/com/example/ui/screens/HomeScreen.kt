@@ -859,6 +859,7 @@ private fun HomeSmartRadiosSection(
                             ) {
                                 AlbumArtContainer(
                                     albumArtUri = if (mix.coverArtUri != null) android.net.Uri.parse(mix.coverArtUri) else null,
+                                    song = mix.tracks.firstOrNull(),
                                     modifier = Modifier.fillMaxSize(),
                                     cornerRadius = 8.dp,
                                     contentDescription = mix.title
@@ -1052,6 +1053,7 @@ private fun HomeTopSongsSection(
                     )
 
                     AlbumArtContainer(
+                        song = song,
                         albumArtUri = song.albumArtUri,
                         size = 42.dp,
                         cornerRadius = 6.dp

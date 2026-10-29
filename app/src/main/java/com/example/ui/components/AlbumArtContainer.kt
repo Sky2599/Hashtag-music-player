@@ -45,6 +45,8 @@ fun AlbumArtContainer(
     modifier: Modifier = Modifier,
     albumArtUri: Uri? = null,
     song: Song? = null,
+    songPath: String? = null,
+    songUri: String? = null,
     size: Dp? = null,
     cornerRadius: Dp = 12.dp,
     contentDescription: String = "Album Artwork"
@@ -53,22 +55,25 @@ fun AlbumArtContainer(
     val density = LocalDensity.current
     val shape = remember(cornerRadius) { RoundedCornerShape(cornerRadius) }
 
+    val effectivePath = song?.path ?: (songPath ?: "")
+    val effectiveUri = song?.uri ?: (songUri ?: "")
+
     // High-resolution artwork bytes from embedded ID3/FLAC master tags or folder art
-    var highResArtwork by remember(song?.id, song?.path, song?.customArtworkUri, albumArtUri) {
+    var highResArtwork by remember(song?.id, effectivePath, effectiveUri, song?.customArtworkUri, albumArtUri) {
         mutableStateOf<Any?>(null)
     }
 
-    LaunchedEffect(song?.id, song?.path, song?.uri, song?.customArtworkUri, albumArtUri) {
+    LaunchedEffect(song?.id, effectivePath, effectiveUri, song?.customArtworkUri, albumArtUri) {
         if (!song?.customArtworkUri.isNullOrEmpty()) {
             highResArtwork = Uri.parse(song!!.customArtworkUri)
             return@LaunchedEffect
         }
-        if (song != null) {
+        if (effectivePath.isNotEmpty() || effectiveUri.isNotEmpty() || (song != null && song.albumId > 0)) {
             val bytes = AlbumArtUtil.getArtworkBytes(
                 context = context,
-                songPath = song.path,
-                songUri = song.uri,
-                albumId = song.albumId
+                songPath = effectivePath,
+                songUri = effectiveUri,
+                albumId = song?.albumId ?: 0L
             )
             if (bytes != null) {
                 highResArtwork = bytes
@@ -82,8 +87,8 @@ fun AlbumArtContainer(
                 if (albumId > 0) {
                     val bytes = AlbumArtUtil.getArtworkBytes(
                         context = context,
-                        songPath = "",
-                        songUri = "",
+                        songPath = effectivePath,
+                        songUri = effectiveUri,
                         albumId = albumId
                     )
                     if (bytes != null) {

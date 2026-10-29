@@ -68,6 +68,7 @@ fun MiniPlayer(
             // Strict Yellow Album Art Container
             AlbumArtContainer(
                 albumArtUri = currentSong.albumArtUri,
+                song = currentSong,
                 size = 46.dp,
                 cornerRadius = 6.dp,
                 contentDescription = "Mini player album art"

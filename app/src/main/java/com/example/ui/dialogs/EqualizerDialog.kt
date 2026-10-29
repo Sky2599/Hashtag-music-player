@@ -29,6 +29,10 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.data.model.AppSettings
 import com.example.player.EqualizerState
 import com.example.ui.screens.EqualizerScreen
+import androidx.compose.foundation.border
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import com.example.ui.theme.LocalAppTheme
 import com.example.ui.theme.DeepPurple
 import com.example.ui.theme.DeepPurpleSurface
 import com.example.ui.theme.ElectricVioletLight
@@ -66,13 +70,16 @@ fun EqualizerDialog(
     onReverbBassPunchChange: (Int) -> Unit = {},
     onDismiss: () -> Unit
 ) {
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+
     Dialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)
     ) {
         Surface(
             modifier = Modifier.fillMaxSize(),
-            color = DeepPurple
+            color = if (isLiquidGlass) Color(0xDD081122) else DeepPurple
         ) {
             Column(
                 modifier = Modifier
@@ -83,7 +90,16 @@ fun EqualizerDialog(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(DeepPurpleSurface)
+                        .background(if (isLiquidGlass) Color(0x280D1B2D) else DeepPurpleSurface)
+                        .then(
+                            if (isLiquidGlass) {
+                                Modifier.border(
+                                    1.dp,
+                                    Brush.verticalGradient(listOf(Color(0x35FFFFFF), Color.Transparent)),
+                                    androidx.compose.ui.graphics.RectangleShape
+                                )
+                            } else Modifier
+                        )
                         .padding(horizontal = 16.dp, vertical = 12.dp),
                     horizontalArrangement = androidx.compose.foundation.layout.Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -92,7 +108,7 @@ fun EqualizerDialog(
                         Icon(
                             imageVector = Icons.Default.GraphicEq,
                             contentDescription = null,
-                            tint = ElectricVioletLight,
+                            tint = if (isLiquidGlass) Color(0xFF00F0FF) else ElectricVioletLight,
                             modifier = Modifier.size(24.dp)
                         )
                         Spacer(modifier = Modifier.width(10.dp))

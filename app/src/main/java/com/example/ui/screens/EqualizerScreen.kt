@@ -84,6 +84,67 @@ import com.example.ui.util.TactileHaptics
 import com.example.ui.util.instantTapDown
 import kotlin.math.cos
 import kotlin.math.sin
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.BlendMode
+import com.example.ui.theme.LocalAppTheme
+import com.example.ui.util.LiquidGlassSheen
+
+@Composable
+private fun ReflectiveEqualizerCard(
+    modifier: Modifier = Modifier,
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(16.dp),
+    containerColor: Color? = null,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+
+    val actualBg = containerColor ?: if (isLiquidGlass) Color(0x220D1B2D) else DeepPurpleCard
+
+    Card(
+        modifier = modifier
+            .border(
+                width = 1.dp,
+                brush = if (isLiquidGlass) {
+                    LiquidGlassSheen.GlassBorderGradient
+                } else {
+                    Brush.linearGradient(
+                        colors = listOf(
+                            theme.primaryLight.copy(alpha = 0.45f),
+                            Color(0x18FFFFFF),
+                            theme.primary.copy(alpha = 0.25f)
+                        )
+                    )
+                },
+                shape = shape
+            )
+            .drawWithContent {
+                drawContent()
+                if (isLiquidGlass) {
+                    drawRect(
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color(0x18FFFFFF),
+                                Color.Transparent
+                            ),
+                            startY = 0f,
+                            endY = size.height * 0.35f
+                        )
+                    )
+                }
+            },
+        shape = shape,
+        colors = CardDefaults.cardColors(containerColor = actualBg),
+        content = content
+    )
+}
 
 @Composable
 fun EqualizerScreen(
@@ -121,10 +182,13 @@ fun EqualizerScreen(
     val view = LocalView.current
     val presets = listOf("Flat", "V-Line", "Rock", "Pop", "Jazz", "Bass Boost", "Electronic", "Vocal", "Treble", "Acoustic")
 
+    val theme = LocalAppTheme.current
+    val isLiquidGlass = theme.toneProfileLabel.contains("Liquid Glass", ignoreCase = true)
+
     LazyColumn(
         modifier = modifier
             .fillMaxSize()
-            .background(DeepPurple)
+            .background(if (isLiquidGlass) Color.Transparent else DeepPurple)
             .padding(horizontal = 16.dp),
         contentPadding = PaddingValues(top = 8.dp, bottom = 90.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
@@ -170,17 +234,42 @@ fun EqualizerScreen(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(16.dp))
-                            .background(if (isSelected) ElectricViolet else DeepPurpleDark)
+                            .background(
+                                if (isSelected) {
+                                    if (isLiquidGlass) Color(0x3500F0FF) else ElectricViolet
+                                } else {
+                                    if (isLiquidGlass) Color(0x18FFFFFF) else DeepPurpleDark
+                                }
+                            )
+                            .border(
+                                width = 1.dp,
+                                brush = if (isSelected) {
+                                    if (isLiquidGlass) {
+                                        Brush.linearGradient(
+                                            listOf(Color(0xE0FFFFFF), Color(0x8000F0FF), Color(0xC0FFFFFF))
+                                        )
+                                    } else {
+                                        Brush.linearGradient(listOf(ElectricVioletLight, ElectricVioletLight))
+                                    }
+                                } else {
+                                    if (isLiquidGlass) {
+                                        Brush.linearGradient(listOf(Color(0x28FFFFFF), Color(0x10FFFFFF)))
+                                    } else {
+                                        Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                    }
+                                },
+                                shape = RoundedCornerShape(16.dp)
+                            )
                             .clickable {
                                 TactileHaptics.selectionClick(view)
                                 onPresetSelect(preset)
                             }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .padding(horizontal = 14.dp, vertical = 7.dp)
                             .testTag("preset_$preset")
                     ) {
                         Text(
                             text = preset,
-                            color = if (isSelected) TextPrimary else TextSecondary,
+                            color = if (isSelected) (if (isLiquidGlass) Color.White else TextPrimary) else TextSecondary,
                             fontSize = 12.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                         )
@@ -191,12 +280,11 @@ fun EqualizerScreen(
 
         // Graphic Equalizer Sliders Card (Switchable 5 and 10 Bands)
         item {
-            Card(
+            ReflectiveEqualizerCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("graphic_equalizer_card"),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Column(
                     modifier = Modifier.padding(16.dp)
@@ -213,21 +301,35 @@ fun EqualizerScreen(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
-                                .background(DeepPurpleDark)
+                                .background(if (isLiquidGlass) Color(0x1C0D1B2D) else DeepPurpleDark)
+                                .border(
+                                    1.dp,
+                                    if (isLiquidGlass) Color(0x30FFFFFF) else Color.Transparent,
+                                    RoundedCornerShape(20.dp)
+                                )
                                 .padding(3.dp),
                             horizontalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(if (equalizerState.bandMode == 5) ElectricViolet else Color.Transparent)
+                                    .background(
+                                        if (equalizerState.bandMode == 5) {
+                                            if (isLiquidGlass) Color(0x3500F0FF) else ElectricViolet
+                                        } else Color.Transparent
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (equalizerState.bandMode == 5 && isLiquidGlass) Color(0x8000F0FF) else Color.Transparent,
+                                        RoundedCornerShape(16.dp)
+                                    )
                                     .instantTapDown(hapticLightImpact = false) { onBandModeChange(5) }
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                                     .testTag("band_mode_5")
                             ) {
                                 Text(
                                     text = "5 Bands",
-                                    color = if (equalizerState.bandMode == 5) TextPrimary else TextSecondary,
+                                    color = if (equalizerState.bandMode == 5) (if (isLiquidGlass) Color.White else TextPrimary) else TextSecondary,
                                     fontSize = 12.sp,
                                     fontWeight = if (equalizerState.bandMode == 5) FontWeight.Bold else FontWeight.Medium
                                 )
@@ -235,7 +337,16 @@ fun EqualizerScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(16.dp))
-                                    .background(if (equalizerState.bandMode == 10) ElectricViolet else Color.Transparent)
+                                    .background(
+                                        if (equalizerState.bandMode == 10) {
+                                            if (isLiquidGlass) Color(0x3500F0FF) else ElectricViolet
+                                        } else Color.Transparent
+                                    )
+                                    .border(
+                                        1.dp,
+                                        if (equalizerState.bandMode == 10 && isLiquidGlass) Color(0x8000F0FF) else Color.Transparent,
+                                        RoundedCornerShape(16.dp)
+                                    )
                                     .instantTapDown(hapticLightImpact = false) { onBandModeChange(10) }
                                     .padding(horizontal = 12.dp, vertical = 6.dp)
                                     .testTag("band_mode_10")
@@ -243,7 +354,7 @@ fun EqualizerScreen(
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
                                         text = "10 Bands",
-                                        color = if (equalizerState.bandMode == 10) TextPrimary else TextSecondary,
+                                        color = if (equalizerState.bandMode == 10) (if (isLiquidGlass) Color.White else TextPrimary) else TextSecondary,
                                         fontSize = 12.sp,
                                         fontWeight = if (equalizerState.bandMode == 10) FontWeight.Bold else FontWeight.Medium
                                     )
@@ -269,7 +380,12 @@ fun EqualizerScreen(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(DeepPurpleDark)
+                                .background(if (isLiquidGlass) Color(0x1C0D1B2D) else DeepPurpleDark)
+                                .border(
+                                    1.dp,
+                                    if (isLiquidGlass) Color(0x30FFFFFF) else Color.Transparent,
+                                    RoundedCornerShape(12.dp)
+                                )
                                 .instantTapDown(hapticLightImpact = true) { onPresetSelect("Flat") }
                                 .padding(horizontal = 10.dp, vertical = 6.dp)
                                 .testTag("eq_reset_flat"),
@@ -278,7 +394,7 @@ fun EqualizerScreen(
                             Icon(
                                 imageVector = Icons.Default.Refresh,
                                 contentDescription = "Flat EQ",
-                                tint = ElectricVioletLight,
+                                tint = if (isLiquidGlass) Color(0xFF00F0FF) else ElectricVioletLight,
                                 modifier = Modifier.size(13.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
@@ -484,12 +600,11 @@ fun EqualizerScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 // Bass Boost Card
-                Card(
+                ReflectiveEqualizerCard(
                     modifier = Modifier
                         .weight(1f)
                         .testTag("bass_boost_card"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp),
@@ -702,13 +817,12 @@ fun EqualizerScreen(
                 }
 
                 // Stereo Width Processing Dial Card (Operational 0% Mono to 200% Ultra-Wide)
-                Card(
+                ReflectiveEqualizerCard(
                     modifier = Modifier
                         .weight(1f)
                         .testTag("stereo_width_card")
                         .testTag("virtualizer_card"),
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Column(
                         modifier = Modifier.padding(12.dp),
@@ -969,12 +1083,11 @@ fun EqualizerScreen(
 
         // Crossfade & Audio Processing Card
         item {
-            Card(
+            ReflectiveEqualizerCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("crossfade_section_card"),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
@@ -1132,12 +1245,11 @@ fun EqualizerScreen(
 
         // Parametric EQ & AutoEQ Headphone Correction Section
         item {
-            Card(
+            ReflectiveEqualizerCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("peq_section_card"),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
@@ -1247,9 +1359,20 @@ fun EqualizerScreen(
                                         .testTag("autoeq_profile_${profile.name.replace(" ", "_")}"),
                                     shape = RoundedCornerShape(12.dp),
                                     colors = CardDefaults.cardColors(
-                                        containerColor = if (isSelected) ElectricViolet.copy(alpha = 0.28f) else DeepPurpleDark
+                                        containerColor = if (isSelected) {
+                                            if (isLiquidGlass) Color(0x3500F0FF) else ElectricViolet.copy(alpha = 0.28f)
+                                        } else {
+                                            if (isLiquidGlass) Color(0x180D1B2D) else DeepPurpleDark
+                                        }
                                     ),
-                                    border = if (isSelected) androidx.compose.foundation.BorderStroke(1.dp, ElectricViolet) else null
+                                    border = if (isSelected) {
+                                        androidx.compose.foundation.BorderStroke(
+                                            1.dp,
+                                            if (isLiquidGlass) Color(0xFF00F0FF) else ElectricViolet
+                                        )
+                                    } else if (isLiquidGlass) {
+                                        androidx.compose.foundation.BorderStroke(1.dp, Color(0x25FFFFFF))
+                                    } else null
                                 ) {
                                     Column(modifier = Modifier.padding(12.dp)) {
                                         Row(
@@ -1266,13 +1389,13 @@ fun EqualizerScreen(
                                                     Icon(
                                                         imageVector = androidx.compose.material.icons.Icons.Default.Check,
                                                         contentDescription = "Active Profile",
-                                                        tint = ElectricVioletLight,
+                                                        tint = if (isLiquidGlass) Color(0xFF80F7FF) else ElectricVioletLight,
                                                         modifier = Modifier.size(16.dp)
                                                     )
                                                 }
                                                 Text(
                                                     text = profile.name,
-                                                    color = if (isSelected) ElectricVioletLight else TextPrimary,
+                                                    color = if (isSelected) (if (isLiquidGlass) Color(0xFF80F7FF) else ElectricVioletLight) else TextPrimary,
                                                     fontSize = 13.sp,
                                                     fontWeight = FontWeight.Bold,
                                                     maxLines = 1,
@@ -1282,7 +1405,13 @@ fun EqualizerScreen(
                                             Box(
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(6.dp))
-                                                    .background(if (isSelected) ElectricViolet.copy(alpha = 0.4f) else DeepPurpleCard)
+                                                    .background(
+                                                        if (isSelected) {
+                                                            if (isLiquidGlass) Color(0x5000F0FF) else ElectricViolet.copy(alpha = 0.4f)
+                                                        } else {
+                                                            if (isLiquidGlass) Color(0x25FFFFFF) else DeepPurpleCard
+                                                        }
+                                                    )
                                                     .padding(horizontal = 6.dp, vertical = 2.dp)
                                             ) {
                                                 Text(
@@ -1311,12 +1440,11 @@ fun EqualizerScreen(
 
         // 6. Advanced Reverb & Loudspeaker Room Acoustic Simulation Engine
         item {
-            Card(
+            ReflectiveEqualizerCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("reverb_acoustic_room_card"),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     // Header with Master Switch
@@ -1380,14 +1508,21 @@ fun EqualizerScreen(
                                 .clip(RoundedCornerShape(12.dp))
                                 .border(
                                     width = 1.dp,
-                                    color = if (equalizerState.reverbLoudspeakerBass) Color(0xFFFF9800) else DeepPurpleDark,
+                                    color = if (equalizerState.reverbLoudspeakerBass) {
+                                        Color(0xFFFF9800)
+                                    } else if (isLiquidGlass) {
+                                        Color(0x35FFFFFF)
+                                    } else {
+                                        DeepPurpleDark
+                                    },
                                     shape = RoundedCornerShape(12.dp)
                                 ),
                             colors = CardDefaults.cardColors(
-                                containerColor = if (equalizerState.reverbLoudspeakerBass)
-                                    Color(0xFFFF9800).copy(alpha = 0.12f)
-                                else
-                                    DeepPurpleDark
+                                containerColor = if (equalizerState.reverbLoudspeakerBass) {
+                                    if (isLiquidGlass) Color(0x33FF9800) else Color(0xFFFF9800).copy(alpha = 0.12f)
+                                } else {
+                                    if (isLiquidGlass) Color(0x180D1B2D) else DeepPurpleDark
+                                }
                             )
                         ) {
                             Column(modifier = Modifier.padding(12.dp)) {
@@ -1474,8 +1609,8 @@ fun EqualizerScreen(
                                 .fillMaxWidth()
                                 .height(130.dp)
                                 .clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF090712))
-                                .border(1.dp, DeepPurpleDark, RoundedCornerShape(12.dp))
+                                .background(if (isLiquidGlass) Color(0x90050810) else Color(0xFF090712))
+                                .border(1.dp, if (isLiquidGlass) Color(0x3500F0FF) else DeepPurpleDark, RoundedCornerShape(12.dp))
                                 .padding(8.dp)
                         ) {
                             val decay = equalizerState.reverbDecayMs
@@ -1664,10 +1799,35 @@ fun EqualizerScreen(
                                         .clip(RoundedCornerShape(12.dp))
                                         .background(
                                             if (isSelected) {
-                                                if (presetKey.startsWith("JBL")) Color(0xFFFF9800) else ElectricViolet
+                                                if (isLiquidGlass) {
+                                                    if (presetKey.startsWith("JBL")) Color(0x40FF9800) else Color(0x3500F0FF)
+                                                } else {
+                                                    if (presetKey.startsWith("JBL")) Color(0xFFFF9800) else ElectricViolet
+                                                }
                                             } else {
-                                                DeepPurpleDark
+                                                if (isLiquidGlass) Color(0x18FFFFFF) else DeepPurpleDark
                                             }
+                                        )
+                                        .border(
+                                            width = 1.dp,
+                                            brush = if (isSelected) {
+                                                if (isLiquidGlass) {
+                                                    if (presetKey.startsWith("JBL")) {
+                                                        Brush.linearGradient(listOf(Color(0xFFFFB74D), Color(0xFFFF9800)))
+                                                    } else {
+                                                        Brush.linearGradient(listOf(Color(0xE0FFFFFF), Color(0x8000F0FF), Color(0xC0FFFFFF)))
+                                                    }
+                                                } else {
+                                                    Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                                }
+                                            } else {
+                                                if (isLiquidGlass) {
+                                                    Brush.linearGradient(listOf(Color(0x28FFFFFF), Color(0x10FFFFFF)))
+                                                } else {
+                                                    Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                                }
+                                            },
+                                            shape = RoundedCornerShape(12.dp)
                                         )
                                         .clickable {
                                             TactileHaptics.selectionClick(view)
@@ -1678,7 +1838,7 @@ fun EqualizerScreen(
                                 ) {
                                     Text(
                                         text = presetLabel,
-                                        color = if (isSelected) TextPrimary else TextSecondary,
+                                        color = if (isSelected) (if (isLiquidGlass) Color.White else TextPrimary) else TextSecondary,
                                         fontSize = 11.5.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
@@ -1802,12 +1962,11 @@ fun EqualizerScreen(
 
         // 7. Visualiser & Customization Engine Card (Shifted to bottom for effortless customization)
         item {
-            Card(
+            ReflectiveEqualizerCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .testTag("visualizer_customization_card"),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = DeepPurpleCard)
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     // Header & Reset Action
@@ -1875,7 +2034,7 @@ fun EqualizerScreen(
                     )
 
                     Spacer(modifier = Modifier.height(16.dp))
-                    HorizontalDivider(color = DeepPurpleDark)
+                    HorizontalDivider(color = if (isLiquidGlass) Color(0x30FFFFFF) else DeepPurpleDark)
                     Spacer(modifier = Modifier.height(12.dp))
 
                     // 1. VISUALIZER RENDER STYLE SELECTOR
@@ -1904,7 +2063,30 @@ fun EqualizerScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) ElectricViolet else DeepPurpleDark)
+                                    .background(
+                                        if (isSelected) {
+                                            if (isLiquidGlass) Color(0x3500F0FF) else ElectricViolet
+                                        } else {
+                                            if (isLiquidGlass) Color(0x18FFFFFF) else DeepPurpleDark
+                                        }
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        brush = if (isSelected) {
+                                            if (isLiquidGlass) {
+                                                Brush.linearGradient(listOf(Color(0xE0FFFFFF), Color(0x8000F0FF), Color(0xC0FFFFFF)))
+                                            } else {
+                                                Brush.linearGradient(listOf(ElectricVioletLight, ElectricVioletLight))
+                                            }
+                                        } else {
+                                            if (isLiquidGlass) {
+                                                Brush.linearGradient(listOf(Color(0x28FFFFFF), Color(0x10FFFFFF)))
+                                            } else {
+                                                Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(12.dp)
+                                    )
                                     .clickable {
                                         TactileHaptics.selectionClick(view)
                                         onSettingsChanged(appSettings.copy(visualizerStyle = styleKey))
@@ -1914,7 +2096,7 @@ fun EqualizerScreen(
                             ) {
                                 Text(
                                     text = styleName,
-                                    color = if (isSelected) TextPrimary else TextSecondary,
+                                    color = if (isSelected) (if (isLiquidGlass) Color.White else TextPrimary) else TextSecondary,
                                     fontSize = 11.5.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
@@ -1950,9 +2132,29 @@ fun EqualizerScreen(
                             Box(
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(12.dp))
-                                    .background(if (isSelected) ElectricViolet.copy(alpha = 0.35f) else DeepPurpleDark)
-                                    .then(
-                                        if (isSelected) Modifier.border(1.dp, ElectricVioletLight, RoundedCornerShape(12.dp)) else Modifier
+                                    .background(
+                                        if (isSelected) {
+                                            if (isLiquidGlass) Color(0x3500F0FF) else ElectricViolet.copy(alpha = 0.35f)
+                                        } else {
+                                            if (isLiquidGlass) Color(0x18FFFFFF) else DeepPurpleDark
+                                        }
+                                    )
+                                    .border(
+                                        width = 1.dp,
+                                        brush = if (isSelected) {
+                                            if (isLiquidGlass) {
+                                                Brush.linearGradient(listOf(Color(0xE0FFFFFF), Color(0x8000F0FF), Color(0xC0FFFFFF)))
+                                            } else {
+                                                Brush.linearGradient(listOf(ElectricVioletLight, ElectricVioletLight))
+                                            }
+                                        } else {
+                                            if (isLiquidGlass) {
+                                                Brush.linearGradient(listOf(Color(0x28FFFFFF), Color(0x10FFFFFF)))
+                                            } else {
+                                                Brush.linearGradient(listOf(Color.Transparent, Color.Transparent))
+                                            }
+                                        },
+                                        shape = RoundedCornerShape(12.dp)
                                     )
                                     .clickable {
                                         TactileHaptics.selectionClick(view)
@@ -1973,7 +2175,7 @@ fun EqualizerScreen(
                                     )
                                     Text(
                                         text = colorName,
-                                        color = if (isSelected) TextPrimary else TextSecondary,
+                                        color = if (isSelected) (if (isLiquidGlass) Color.White else TextPrimary) else TextSecondary,
                                         fontSize = 11.5.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                     )
@@ -2000,7 +2202,8 @@ fun EqualizerScreen(
                         Row(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(DeepPurpleDark)
+                                .background(if (isLiquidGlass) Color(0x20FFFFFF) else DeepPurpleDark)
+                                .border(1.dp, if (isLiquidGlass) Color(0x35FFFFFF) else Color.Transparent, RoundedCornerShape(16.dp))
                                 .padding(2.dp),
                             horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
@@ -2009,7 +2212,13 @@ fun EqualizerScreen(
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(14.dp))
-                                        .background(if (isSelected) ElectricViolet else Color.Transparent)
+                                        .background(
+                                            if (isSelected) {
+                                                if (isLiquidGlass) Color(0x4000F0FF) else ElectricViolet
+                                            } else {
+                                                Color.Transparent
+                                            }
+                                        )
                                         .clickable {
                                             TactileHaptics.selectionClick(view)
                                             onSettingsChanged(appSettings.copy(visualizerBarCount = count))
@@ -2019,7 +2228,7 @@ fun EqualizerScreen(
                                 ) {
                                     Text(
                                         text = "$count Bands",
-                                        color = if (isSelected) TextPrimary else TextSecondary,
+                                        color = if (isSelected) (if (isLiquidGlass) Color.White else TextPrimary) else TextSecondary,
                                         fontSize = 10.5.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                     )
