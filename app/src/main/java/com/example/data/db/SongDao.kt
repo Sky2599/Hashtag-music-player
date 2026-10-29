@@ -47,6 +47,15 @@ interface SongDao {
     @Query("SELECT * FROM songs")
     suspend fun getAllSongsOnce(): List<SongEntity>
 
+    @Query("SELECT * FROM songs WHERE isFavorite = 1 ORDER BY title ASC")
+    suspend fun getFavoritesOnce(): List<SongEntity>
+
+    @Query("SELECT * FROM songs ORDER BY dateAdded DESC LIMIT 50")
+    suspend fun getRecentlyAddedOnce(): List<SongEntity>
+
+    @Query("SELECT * FROM songs WHERE id = :songId LIMIT 1")
+    suspend fun getSongById(songId: Long): SongEntity?
+
     @Query("DELETE FROM songs WHERE id < 0")
     suspend fun deleteDemoSongs()
 

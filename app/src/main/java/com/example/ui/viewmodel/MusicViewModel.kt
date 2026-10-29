@@ -316,6 +316,28 @@ class MusicViewModel(application: Application) : AndroidViewModel(application) {
                         playSong(q[targetIndex])
                     }
                 }
+                service.onToggleFavoriteCallback = { song -> toggleFavorite(song) }
+                service.onToggleShuffleCallback = { toggleShuffle() }
+                service.onToggleRepeatCallback = { toggleRepeat() }
+                service.onPlaySongIdCallback = { songId ->
+                    val q = _queue.value
+                    val target = q.find { it.id == songId }
+                    if (target != null) {
+                        playSong(target)
+                    } else {
+                        val all = allSongs.value
+                        val found = all.find { it.id == songId }
+                        if (found != null) {
+                            playSong(found)
+                        }
+                    }
+                }
+
+                viewModelScope.launch {
+                    _queue.collect { list ->
+                        service.setQueue(list)
+                    }
+                }
             }
         }
 

@@ -125,6 +125,14 @@ class SettingsManager(context: Context) {
     fun getLastShuffle(): Boolean = prefs.getBoolean("is_shuffle", false)
     fun getLastRepeat(): Boolean = prefs.getBoolean("is_repeat", false)
 
+    fun saveLastShuffle(isShuffle: Boolean) {
+        prefs.edit().putBoolean("is_shuffle", isShuffle).apply()
+    }
+
+    fun saveLastRepeat(isRepeat: Boolean) {
+        prefs.edit().putBoolean("is_repeat", isRepeat).apply()
+    }
+
     fun saveLastTab(tabIndex: Int) {
         prefs.edit().putInt("last_active_tab", tabIndex).apply()
     }
